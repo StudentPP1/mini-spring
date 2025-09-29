@@ -1,5 +1,6 @@
 package com.test;
 
+import com.test.multithreading.SocketThreadPool;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -13,19 +14,29 @@ public class Server {
     private static final int SERVER_PORT = 8080;
     private static final int BUFFER_SIZE = 100;
     private static final int INPUT_STREAM_EMPTY = -1;
+    private static final int THREAD_POOL_SIZE = 10;
     private static final Logger LOGGER = LogManager.getLogger(Server.class);
+
     public static void main(String[] args) {
+        SocketThreadPool pool = new SocketThreadPool(THREAD_POOL_SIZE);
         try (ServerSocket serverSocket = new ServerSocket(SERVER_PORT)) {
             while (true) {
                 Socket clientConnection = serverSocket.accept();
-                LOGGER.info("Get client connection");
-                // TODO: create thread
-                readInput(clientConnection);
-                sendResponse(clientConnection);
-                clientConnection.close();
+                pool.execute(() -> processClientRequest(clientConnection));
             }
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             LOGGER.error(e.getMessage());
+            pool.shutdown();
+        }
+    }
+
+    private static void processClientRequest(Socket clientConnection) {
+        try (Socket socket = clientConnection) {
+            LOGGER.info("Get client connection");
+            readInput(socket);
+            sendResponse(socket);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
