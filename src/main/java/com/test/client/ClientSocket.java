@@ -1,4 +1,4 @@
-package com.test;
+package com.test.client;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,7 +29,11 @@ public class ClientSocket {
         OutputStream outputStream = clientSocket.getOutputStream();
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
         writer.write("POST /data HTTP/1.1\n");
-        writer.write("Content-Type: application/json");
+        writer.write("Content-Type: application/json\n");
+        writer.write("\n");
+        writer.write("{\n");
+        writer.write("\"data\": \"something\"\n");
+        writer.write("}");
         writer.flush();
         LOGGER.info("Client send data to server");
         clientSocket.shutdownOutput();

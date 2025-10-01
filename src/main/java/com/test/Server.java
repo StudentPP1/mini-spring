@@ -1,6 +1,9 @@
 package com.test;
 
-import com.test.multithreading.SocketThreadPool;
+import com.test.entity.Data;
+import com.test.http.HttpRequest;
+import com.test.mapper.ObjectMapper;
+import com.test.socketPool.SocketThreadPool;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -35,7 +38,7 @@ public class Server {
             LOGGER.info("Get client connection");
             readInput(socket);
             sendResponse(socket);
-        } catch (IOException e) {
+        } catch (IOException | NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
     }
@@ -51,7 +54,7 @@ public class Server {
         outputStream.flush();
     }
 
-    private static void readInput(Socket clientSocket) throws IOException {
+    private static void readInput(Socket clientSocket) throws IOException, NoSuchFieldException, IllegalAccessException {
         InputStream inputStream = clientSocket.getInputStream();
         LOGGER.debug("Get client input stream");
         StringBuilder content = new StringBuilder();
@@ -68,6 +71,11 @@ public class Server {
             LOGGER.debug("Convert {} bytes to string", lengthReadBytes);
             content.append(chars, 0, lengthReadBytes);
         }
-        LOGGER.info("Content: \n{}", content);
+
+        HttpRequest httpRequest = HttpRequest.build(content);
+        LOGGER.info("HttpRequest: \n{}", httpRequest);
+
+        Data data = ObjectMapper.parse(httpRequest.getBody(), Data.class);
+        LOGGER.info("Data object from request body: \n{}", data);
     }
 }

@@ -1,4 +1,4 @@
-package com.test.multithreading;
+package com.test.socketPool;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
