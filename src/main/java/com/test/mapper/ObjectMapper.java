@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+// TODO: add tokenizer to parse arrays and other types
 public final class ObjectMapper {
 
     private static final Logger log = LogManager.getLogger(ObjectMapper.class);
