@@ -2,6 +2,8 @@ package com.test;
 
 import com.test.entity.Note;
 import com.test.http.HttpRequest;
+import com.test.http.HttpResponse;
+import com.test.http.HttpStatus;
 import com.test.mapper.ObjectMapper;
 import com.test.socketPool.SocketThreadPool;
 import org.apache.logging.log4j.LogManager;
@@ -51,12 +53,9 @@ public class App {
 
     private static void sendResponse(Socket clientConnection) throws IOException {
         OutputStream outputStream = clientConnection.getOutputStream();
-        String response = "Code 200";
-        char[] chars = response.toCharArray();
-        for (char c : chars) {
-            outputStream.write(c);
-        }
-        LOGGER.info("Send response: '{}' to client", response);
+        HttpResponse httpResponse = HttpResponse.build(HttpStatus.OK);
+        outputStream.write(httpResponse.toByteArray());
+        LOGGER.info("Send response: '{}' to client", httpResponse);
         outputStream.flush();
     }
 
