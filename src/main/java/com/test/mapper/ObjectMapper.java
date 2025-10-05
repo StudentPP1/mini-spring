@@ -1,5 +1,6 @@
 package com.test.mapper;
 
+import com.test.mapper.tokenizer.Tokenizer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -10,13 +11,17 @@ import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// TODO: add tokenizer to parse arrays and other types
 public final class ObjectMapper {
+    private ObjectMapper() {
+
+    }
 
     private static final Logger log = LogManager.getLogger(ObjectMapper.class);
 
     public static <T> T parse(String content, Class<T> objectClass) {
         try {
+            log.trace(Tokenizer.getTokens(content));
+            // TODO: list of tokens => object of class T by using Reflection API
             T classInstance = objectClass.getDeclaredConstructor().newInstance();
             log.trace("Class instance: {}", classInstance);
             String[] fields = content.split("\n");
