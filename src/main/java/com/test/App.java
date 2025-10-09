@@ -4,7 +4,7 @@ import com.test.entity.Note;
 import com.test.http.HttpRequest;
 import com.test.http.HttpResponse;
 import com.test.http.HttpStatus;
-import com.test.mapper.objectMapper.ObjectMapper;
+import com.test.mapper.convertor.ObjectMapper;
 import com.test.socketPool.SocketThreadPool;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
