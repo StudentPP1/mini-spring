@@ -1,0 +1,27 @@
+### POST requets
+POST http://localhost:8080/note/create
+Content-Type: application/json
+
+{
+  "title": "First note",
+  "content": "Hello from raw socket client"
+}
+
+### GET requets
+GET http://localhost:8080/note/all
+
+### PUT requets
+PUT http://localhost:8080/note/update
+Content-Type: application/json
+
+{
+  "id": 1,
+  "title": "First note (updated)",
+  "content": "Updated content"
+}
+
+### GET requets
+GET http://localhost:8080/note/all
+
+### DELETE requets
+DELETE http://localhost:8080/note/delete/1
