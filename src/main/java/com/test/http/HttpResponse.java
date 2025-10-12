@@ -4,11 +4,27 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public record HttpResponse(HttpStatus httpStatus, Map<String, String> headers, String body) {
+public class HttpResponse {
+    private HttpStatus httpStatus;
+    private Map<String, String> headers;
+    private String body;
 
-    public HttpResponse {
-        if (headers == null) headers = new LinkedHashMap<>();
-        if (body == null) body = "";
+    private HttpResponse(HttpStatus httpStatus, Map<String, String> headers, String body) {
+        this.httpStatus = httpStatus;
+        this.headers = headers;
+        this.body = body;
+    }
+
+    public void setHttpStatus(HttpStatus httpStatus) {
+        this.httpStatus = httpStatus;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
+    }
+
+    public void setHeaders(Map<String, String> headers) {
+        this.headers = headers;
     }
 
     public static HttpResponse build(HttpStatus status) {
@@ -20,7 +36,7 @@ public record HttpResponse(HttpStatus httpStatus, Map<String, String> headers, S
     }
 
     public byte[] toByteArray() {
-        byte[] bodyBytes = body.getBytes(StandardCharsets.UTF_8);
+        byte[] bodyBytes = body == null ? new byte[0] : body.getBytes(StandardCharsets.UTF_8);
         headers.putIfAbsent("Connection", "close");
         headers.putIfAbsent("Content-Length", String.valueOf(bodyBytes.length));
         String statusLine = "HTTP/1.1 " + httpStatus.getStatus() + "\r\n";
@@ -32,13 +48,17 @@ public record HttpResponse(HttpStatus httpStatus, Map<String, String> headers, S
         byte[] firstLineAndHeaders = builder.toString().getBytes(StandardCharsets.UTF_8);
         byte[] fullContent = new byte[firstLineAndHeaders.length + bodyBytes.length];
         System.arraycopy(firstLineAndHeaders, 0, fullContent, 0, firstLineAndHeaders.length);
-        System.arraycopy(bodyBytes, 0, fullContent, 0, bodyBytes.length);
+        System.arraycopy(bodyBytes, 0, fullContent, firstLineAndHeaders.length, bodyBytes.length);
         return fullContent;
     }
 
     @Override
     public String toString() {
-        return "HttpResponse{httpStatus=%s, headers=%s, bodyLen=%d}"
-                .formatted(httpStatus, headers, body.getBytes(StandardCharsets.UTF_8).length);
+        return "HttpResponse{httpStatus=%s, headers=%s, body=%s, bodyLen=%d}"
+                .formatted(httpStatus, headers, body, body.getBytes(StandardCharsets.UTF_8).length);
+    }
+
+    public void setHeader(String name, String value) {
+        this.headers.putIfAbsent(name, value);
     }
 }
