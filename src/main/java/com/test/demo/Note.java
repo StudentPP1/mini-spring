@@ -1,4 +1,4 @@
-package com.test.entity;
+package com.test.demo;
 
 public class Note {
     private Long id;

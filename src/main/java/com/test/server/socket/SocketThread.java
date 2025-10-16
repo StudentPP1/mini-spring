@@ -1,4 +1,4 @@
-package com.test.socketPool;
+package com.test.server.socket;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;

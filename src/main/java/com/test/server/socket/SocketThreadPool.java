@@ -1,4 +1,4 @@
-package com.test.socketPool;
+package com.test.server.socket;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

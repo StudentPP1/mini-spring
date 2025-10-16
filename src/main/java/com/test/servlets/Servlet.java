@@ -1,11 +1,11 @@
-package com.test.filter;
+package com.test.servlets;
 
 import com.test.config.ServletConfig;
 import com.test.http.HttpRequest;
 import com.test.http.HttpResponse;
 
-public interface Filter {
+public interface Servlet {
     void init(ServletConfig config) throws Exception;
-    void doFilter(HttpRequest request, HttpResponse response, FilterChain filterChain) throws Exception;
+    void service(HttpRequest request, HttpResponse response) throws Exception;
     void destroy();
 }

@@ -1,10 +1,14 @@
 package com.test.http;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class HttpResponse {
+    private static final Logger log = LogManager.getLogger(HttpResponse.class);
     private HttpStatus httpStatus;
     private Map<String, String> headers;
     private String body;
@@ -36,6 +40,7 @@ public class HttpResponse {
     }
 
     public byte[] toByteArray() {
+        log.debug("Send response: {}", this);
         byte[] bodyBytes = body == null ? new byte[0] : body.getBytes(StandardCharsets.UTF_8);
         headers.putIfAbsent("Connection", "close");
         headers.putIfAbsent("Content-Length", String.valueOf(bodyBytes.length));
