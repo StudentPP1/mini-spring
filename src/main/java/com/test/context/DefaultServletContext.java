@@ -5,9 +5,9 @@ import com.test.filter.Filter;
 import com.test.filter.FilterRegistration;
 import com.test.filter.RegisteredFilter;
 import com.test.http.UrlPatternMatcher;
-import com.test.servlets.RegisteredServlet;
-import com.test.servlets.Servlet;
-import com.test.servlets.ServletRegistration;
+import com.test.servlet.RegisteredServlet;
+import com.test.servlet.Servlet;
+import com.test.servlet.ServletRegistration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

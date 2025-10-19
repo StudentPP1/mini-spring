@@ -1,4 +1,4 @@
-package com.test.servlets;
+package com.test.servlet;
 
 import com.test.config.ServletConfig;
 import com.test.http.HttpRequest;

@@ -1,7 +1,7 @@
 package com.test.context;
 
 import com.test.filter.Filter;
-import com.test.servlets.Servlet;
+import com.test.servlet.Servlet;
 
 import java.util.List;
 

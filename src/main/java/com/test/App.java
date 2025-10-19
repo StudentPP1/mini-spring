@@ -2,7 +2,7 @@ package com.test;
 
 import com.test.initializer.ApplicationInitializer;
 import com.test.server.HttpServer;
-import com.test.servlets.DispatcherServlet;
+import com.test.servlet.DispatcherServlet;
 
 import java.util.List;
 

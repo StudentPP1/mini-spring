@@ -87,17 +87,17 @@ public class Tokenizer {
         } else if (startsWith(chars, pos, "true")) {
             checkValueBoundary(chars, pos + 4);
             tokens.add(Token.createToken(TRUE_VALUE));
-            log.trace("find TRUE value at pos {}", pos);
+            log.trace("find TRUE valueType at pos {}", pos);
             return pos + 4;
         } else if (startsWith(chars, pos, "false")) {
             checkValueBoundary(chars, pos + 5);
             tokens.add(Token.createToken(FALSE_VALUE));
-            log.trace("find FALSE value at pos: {}", pos);
+            log.trace("find FALSE valueType at pos: {}", pos);
             return pos + 5;
         } else if (startsWith(chars, pos, "null")) {
             checkValueBoundary(chars, pos + 4);
             tokens.add(Token.createToken(NULL_VALUE));
-            log.trace("find NULL value at pos: {}", pos);
+            log.trace("find NULL valueType at pos: {}", pos);
             return pos + 4;
         } else {
             throw new RuntimeException("Unexpected char '" + startChar + "' at " + pos);
@@ -121,7 +121,7 @@ public class Tokenizer {
         if (pos >= chars.length) return;
         char c = chars[pos];
         if (!(isWhitespace(c) || c == ',' || c == ']' || c == '}')) {
-            throw new RuntimeException("Invalid value boundary at " + pos + ", got '" + c + "'");
+            throw new RuntimeException("Invalid valueType boundary at " + pos + ", got '" + c + "'");
         }
     }
 
@@ -152,7 +152,7 @@ public class Tokenizer {
         i = parseExponentPart(chars, i, length);
         checkValueBoundary(chars, i);
         String parsedNumber = String.valueOf(chars, start, i - start);
-        log.trace("find NUMBER with value: [ {} ] at pos: {}", parsedNumber, start);
+        log.trace("find NUMBER with valueType: [ {} ] at pos: {}", parsedNumber, start);
         return new Parsed<>(Token.numberToken(NUMBER_VALUE, new BigDecimal(parsedNumber)), i);
     }
 }

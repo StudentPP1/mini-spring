@@ -2,8 +2,8 @@ package com.test.context;
 
 import com.test.filter.Filter;
 import com.test.filter.FilterRegistration;
-import com.test.servlets.Servlet;
-import com.test.servlets.ServletRegistration;
+import com.test.servlet.Servlet;
+import com.test.servlet.ServletRegistration;
 
 public interface ServletContext {
     <T> void setAttribute(String key, T value);

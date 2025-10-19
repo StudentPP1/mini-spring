@@ -40,25 +40,25 @@ public class ObjectParser {
             String name = fieldName.stringValue();
             Field field = getField(instance.getClass(), name);
             field.setAccessible(true);
-            log.trace("starting parsing value for field");
+            log.trace("starting parsing valueType for field");
             switch (tokens.get(pos).type()) {
                 case START_OBJECT: {
-                    log.trace("value of field: OBJECT");
+                    log.trace("valueType of field: OBJECT");
                     Object nested = newClassInstance(field.getType());
                     pos = parseObject(pos, nested, tokens);
                     field.set(instance, nested);
                     break;
                 }
                 case START_ARRAY: {
-                    log.trace("value of field: ARRAY");
+                    log.trace("valueType of field: ARRAY");
                     int startArrayIndex = pos + 1;
                     pos = parseArray(startArrayIndex, instance, field, tokens);
                     break;
                 }
                 default: {
-                    log.trace("value of field: PRIMITIVE");
+                    log.trace("valueType of field: PRIMITIVE");
                     ObjectValue objectValue = readPrimitive(pos, field.getType(), tokens);
-                    log.trace("value: [ {} ]", objectValue.value());
+                    log.trace("valueType: [ {} ]", objectValue.value());
                     field.set(instance, objectValue.value());
                     pos = objectValue.nextPos();
                 }

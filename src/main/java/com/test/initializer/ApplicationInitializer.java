@@ -16,5 +16,6 @@ public final class ApplicationInitializer implements ServletContextInitializer {
                 .addMapping("/note/*");
         ctx.registerFilter("loggingFilter", new LoggingFilter())
                 .addMapping("/*");
+        // TODO: inject in serlvet context all beans with @RestController
     }
 }

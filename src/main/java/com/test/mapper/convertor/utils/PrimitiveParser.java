@@ -33,12 +33,12 @@ public class PrimitiveParser {
             case STRING_VALUE -> {
                 String string = token.stringValue();
                 Object value = convertFromString(string, targetType);
-                log.trace("parsing string value: [ {} ]", value);
+                log.trace("parsing string valueType: [ {} ]", value);
                 return new ObjectValue(value, pos + 1);
             }
             case NUMBER_VALUE -> {
                 Object value = convertFromNumber(token.numberValue(), targetType);
-                log.trace("parsing number value: [ {} ]", value);
+                log.trace("parsing number valueType: [ {} ]", value);
                 return new ObjectValue(value, pos + 1);
             }
             default -> throw new RuntimeException("Not a primitive at " + pos + ": " + token.type());

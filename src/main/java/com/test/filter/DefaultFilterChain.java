@@ -2,7 +2,7 @@ package com.test.filter;
 
 import com.test.http.HttpRequest;
 import com.test.http.HttpResponse;
-import com.test.servlets.Servlet;
+import com.test.servlet.Servlet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

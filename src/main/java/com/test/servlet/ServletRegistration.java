@@ -1,4 +1,4 @@
-package com.test.servlets;
+package com.test.servlet;
 
 public interface ServletRegistration {
     void addMapping(String... urlPatterns);

@@ -1,4 +1,4 @@
-package com.test.servlets;
+package com.test.servlet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

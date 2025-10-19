@@ -70,7 +70,7 @@ public class StringParser {
         Token token = isFieldName
                 ? Token.stringToken(FIELD_NAME, value.toString())
                 : Token.stringToken(STRING_VALUE, value.toString());
-        log.trace("find: {} with value: [ {} ]", token.type(), token.stringValue());
+        log.trace("find: {} with valueType: [ {} ]", token.type(), token.stringValue());
         return new Parsed<>(token, afterQuote);
     }
 }

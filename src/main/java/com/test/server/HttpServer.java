@@ -4,7 +4,7 @@ import com.test.http.HttpRequest;
 import com.test.http.HttpResponse;
 import com.test.http.HttpStatus;
 import com.test.server.socket.SocketThreadPool;
-import com.test.servlets.DispatcherServlet;
+import com.test.servlet.DispatcherServlet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
