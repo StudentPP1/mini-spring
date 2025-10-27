@@ -51,6 +51,7 @@ public final class ObjectMapper {
             log.trace("finish parsing root object, return instance: {}", instance);
             return instance;
         } catch (Exception e) {
+            log.error("Parse failed: {}", e.getMessage());
             throw new RuntimeException("Parse failed: " + e.getMessage(), e);
         }
     }

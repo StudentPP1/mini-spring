@@ -1,17 +1,32 @@
 package com.test.bean;
 
+import com.test.utils.PropertyResolver;
+import com.test.utils.SimpleTypeConverter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.*;
 
 public final class BeanFactory {
+    private static final Logger log = LogManager.getLogger(BeanFactory.class);
     private final Map<String, BeanDefinition> definitions = new HashMap<>();
     private final Map<String, Object> singletons = new HashMap<>();
     private final ThreadLocal<Set<String>> creating = ThreadLocal.withInitial(HashSet::new);
+    private final List<BeanPostProcessor> postProcessors = new ArrayList<>();
 
     public BeanFactory(List<BeanDefinition> definitions) {
         definitions.forEach(definition ->
                 this.definitions.putIfAbsent(definition.name(), definition)
         );
-        for (BeanDefinition definition : definitions) {
+    }
+
+    public void addPostProcessor(BeanPostProcessor postProcessor) {
+        this.postProcessors.add(postProcessor);
+    }
+
+    public void preInstanceSingletons() {
+        log.trace("create instance for singletons");
+        for (BeanDefinition definition : this.definitions.values()) {
             if (definition.isSingleton()) {
                 singletons.putIfAbsent(definition.name(), createBean(definition.name(), definition));
             }
@@ -34,13 +49,24 @@ public final class BeanFactory {
     }
 
     private Object createBean(String name, BeanDefinition definition) {
+        log.trace("start creating bean with name: {}", name);
         if (!creating.get().add(name))
             throw new IllegalStateException("Circular dependency at '" + name + "'");
         try {
-            if (definition.factory() != null) {
-                return definition.factory().get();
+            Object bean = (definition.factory() != null)
+                    ? definition.factory().get()
+                    : instantiateViaConstructor(definition);
+            log.trace("start post process before initialization: {}", name);
+            for (BeanPostProcessor p : postProcessors) {
+                bean = p.postProcessBeforeInitialization(bean, name);
             }
-            return instantiateViaConstructor(definition);
+            log.trace("skip finding init methods");
+            log.trace("start post process after initialization: {}", name);
+            for (BeanPostProcessor p : postProcessors) {
+                bean = p.postProcessAfterInitialization(bean, name);
+            }
+
+            return bean;
         } finally {
             creating.get().remove(name);
         }
@@ -52,10 +78,12 @@ public final class BeanFactory {
         constructors.sort(Comparator.comparingInt(c -> -c.getParameterCount()));
         for (var constructor : constructors) {
             if (constructor.isVarArgs()) continue;
+            log.trace("resolve args for creating bean: {}", classBean);
             Object[] args = tryResolveArgs(constructor.getParameterTypes(), definition.constructorArgs());
             if (args != null) {
                 try {
                     constructor.setAccessible(true);
+                    log.trace("create instance of bean: {}", classBean);
                     return constructor.newInstance(args);
                 } catch (ReflectiveOperationException e) {
                     throw new RuntimeException("Failed to instantiate " + classBean.getName(), e);
@@ -65,6 +93,7 @@ public final class BeanFactory {
         try {
             var noArg = classBean.getDeclaredConstructor();
             noArg.setAccessible(true);
+            log.trace("create instance with no args of bean: {}", classBean);
             return noArg.newInstance();
         } catch (Exception e) {
             throw new IllegalStateException("No suitable constructor for " + classBean.getName(), e);
@@ -77,14 +106,19 @@ public final class BeanFactory {
         for (int i = 0; i < parameterTypes.length; i++) {
             ConstructorArg arg = constructorArgs.get(i);
             Class<?> parameterType = parameterTypes[i];
-            if (arg.type() == ConstructorArg.Type.BEAN) {
-                Object injectBean = getBean(resolveBeanNameByType(parameterType, arg.typeRef()));
-                if (injectBean == null) return null;
-                out[i] = injectBean;
+            if (arg.type().equals(ConstructorArg.Type.BEAN)) {
+                String beanName = resolveBeanNameByType(parameterType, arg.beanType());
+                log.trace("inject bean: {}", beanName);
+                out[i] = getBean(beanName);
             } else {
-                Object v = arg.valueType();
-                if (v != null && !parameterType.isInstance(v) && !isAssignablePrimitive(parameterType, v)) return null;
-                out[i] = v;
+                String raw = PropertyResolver.resolve(arg.expression());
+                try {
+                    out[i] = SimpleTypeConverter.convert(raw, parameterType);
+                    log.trace("inject @Value: {}", out[i]);
+                } catch (Exception e) {
+                    throw new IllegalStateException("Cannot convert value '" + raw +
+                            "' to " + parameterType.getName(), e);
+                }
             }
         }
         return out;
@@ -103,19 +137,21 @@ public final class BeanFactory {
         return matches.get(0).name();
     }
 
+    public Collection<Object> getAllBeans() {
+        return Collections.unmodifiableCollection(this.singletons.values());
+    }
 
-    private boolean isAssignablePrimitive(Class<?> parameterType, Object value) {
-        if (!parameterType.isPrimitive()) return false;
-        return switch (parameterType.getName()) {
-            case "int"     -> value instanceof Integer;
-            case "long"    -> value instanceof Long;
-            case "double"  -> value instanceof Double;
-            case "float"   -> value instanceof Float;
-            case "boolean" -> value instanceof Boolean;
-            case "char"    -> value instanceof Character;
-            case "byte"    -> value instanceof Byte;
-            case "short"   -> value instanceof Short;
-            default -> false;
-        };
+    public <T> Map<String, T> getBeanByType(Class<T> type) {
+        Map<String, T> result = new HashMap<>();
+        for (Map.Entry<String, BeanDefinition> entry : definitions.entrySet()) {
+            String name = entry.getKey();
+            BeanDefinition definition = entry.getValue();
+            Class<?> beanType = definition.beanClass();
+            if (beanType.isAssignableFrom(type) || Arrays.asList(beanType.getInterfaces()).contains(type)) {
+                T bean = (T) getBean(name);
+                result.put(name, bean);
+            }
+        }
+        return result;
     }
 }

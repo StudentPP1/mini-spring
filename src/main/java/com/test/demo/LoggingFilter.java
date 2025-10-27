@@ -1,5 +1,6 @@
 package com.test.demo;
 
+import com.test.annotation.WebFilter;
 import com.test.config.ServletConfig;
 import com.test.filter.Filter;
 import com.test.filter.FilterChain;
@@ -8,6 +9,7 @@ import com.test.http.HttpResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+@WebFilter(path = "/*", order = -1)
 public class LoggingFilter implements Filter {
 
     private static final Logger log = LogManager.getLogger(LoggingFilter.class);

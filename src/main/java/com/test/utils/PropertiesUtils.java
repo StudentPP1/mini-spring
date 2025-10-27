@@ -28,6 +28,8 @@ public final class PropertiesUtils {
     }
 
     public static String getProperty(String key) {
+        String property = PROPERTIES.getProperty(key);
+        log.trace("return property {}", property);
         return PROPERTIES.getProperty(key);
     }
 }

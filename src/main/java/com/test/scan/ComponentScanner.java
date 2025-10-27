@@ -1,8 +1,11 @@
 package com.test.scan;
 
 import com.test.annotation.Component;
+import com.test.annotation.Value;
 import com.test.bean.BeanDefinition;
 import com.test.bean.ConstructorArg;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,10 +19,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public final class ComponentScanner {
+    private static final Logger log = LogManager.getLogger(ComponentScanner.class);
+
     private ComponentScanner() {
     }
 
     public static List<BeanDefinition> scan(String basePackage) throws IOException, ClassNotFoundException {
+        log.trace("start scanning at package: {}", basePackage);
         List<Class<?>> componentClasses = findClassesIn(basePackage)
                 .stream()
                 .filter(ComponentScanner::isClass)
@@ -38,11 +44,13 @@ public final class ComponentScanner {
         while (directories.hasMoreElements()) {
             URL elementPath = directories.nextElement();
             File directory = new File(elementPath.getFile());
+            log.trace("scanning at path: {}", directory);
             for (File file : Objects.requireNonNull(directory.listFiles())) {
                 if (file.isDirectory()) {
                     classes.addAll(findClassesIn("%s.%s".formatted(basePackage, file.getName())));
                 } else if (file.getName().endsWith(".class")) {
                     String className = "%s.%s".formatted(basePackage, file.getName().replace(".class", ""));
+                    log.trace("find class: {}", className);
                     classes.add(Class.forName(className));
                 }
             }
@@ -59,9 +67,15 @@ public final class ComponentScanner {
             // avoid cycle & system annotation
             if (!seenAnnotations.add(annotationType)) continue;
             if (annotationType.getPackageName().startsWith("java.lang")) continue;
-            if (annotationType.isAnnotationPresent(Component.class)) return true;
+            if (annotationType.isAnnotationPresent(Component.class)) {
+                log.trace("element: {} is component", element.getName());
+                return true;
+            }
             // recursive for sub annotation
-            if (isComponent(annotationType, seenAnnotations)) return true;
+            if (isComponent(annotationType, seenAnnotations)) {
+                log.trace("element: {} is component", element.getName());
+                return true;
+            }
         }
         return false;
     }
@@ -79,14 +93,16 @@ public final class ComponentScanner {
                 .orElseThrow(() ->
                         new RuntimeException("not found constructor in component %s".formatted(component.getName()))
                 );
+        log.trace("create bean definition for component: {} at constructor: {}", component.getName(), constructor);
         for (Parameter parameter : constructor.getParameters()) {
-            Class<?> parameterType = parameter.getType();
-            if (componentClasses.contains(parameterType)) {
-                args.add(ConstructorArg.beanType(parameterType));
+            Value valueAnnotation = parameter.getAnnotation(Value.class);
+            if (valueAnnotation != null) {
+                log.trace("add value: {}", valueAnnotation.value());
+                args.add(ConstructorArg.value(valueAnnotation.value()));
+                continue;
             }
-            else {
-                args.add(ConstructorArg.valueType(parameterType));
-            }
+            log.trace("add bean for injection: {}", parameter.getType());
+            args.add(ConstructorArg.bean(parameter.getType()));
         }
         return new BeanDefinition(component, resolveBeanName(component), args);
     }
@@ -100,14 +116,22 @@ public final class ComponentScanner {
                 try {
                     var method = annotationType.getMethod("name");
                     Object value = method.invoke(annotation);
-                    if (value instanceof String s && !s.isEmpty()) return s;
+                    if (value instanceof String s && !s.isEmpty()) {
+                        log.trace("resolve name: {} for element: {}", s, element);
+                        return s;
+                    }
                 } catch (Exception _) {
                     // name in child of Component annotation can be null
                 }
             }
         }
         String simpleName = element.getSimpleName();
-        if (simpleName.isEmpty()) return element.getName();
-        return Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
+        if (simpleName.isEmpty()) {
+            log.trace("resolve name: {} for element: {}", element.getName(), element);
+            return element.getName();
+        }
+        String name = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
+        log.trace("resolve name: {} for element: {}", name, element);
+        return name;
     }
 }

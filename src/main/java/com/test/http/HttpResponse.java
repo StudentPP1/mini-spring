@@ -27,6 +27,10 @@ public class HttpResponse {
         this.body = body;
     }
 
+    public HttpStatus getHttpStatus() {
+        return httpStatus;
+    }
+
     public void setHeaders(Map<String, String> headers) {
         this.headers = headers;
     }

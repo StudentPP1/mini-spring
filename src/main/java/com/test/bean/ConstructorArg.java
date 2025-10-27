@@ -1,17 +1,17 @@
 package com.test.bean;
 
 /**
- * @param valueType when VALUE
- * @param typeRef when BEAN
+ * kind=BEAN  -> find bean by beanType
+ * kind=VALUE -> resolve expression by PropertyResolver and convert to primitive
  */
-public record ConstructorArg(Type type, Object valueType, Class<?> typeRef) {
-    public enum Type {VALUE, BEAN}
+public record ConstructorArg(Type type, Class<?> beanType, String expression) {
+    public enum Type { BEAN, VALUE }
 
-    public static ConstructorArg valueType(Object v) {
-        return new ConstructorArg(Type.VALUE, v, null);
+    public static ConstructorArg bean(Class<?> beanType) { // injection by type
+        return new ConstructorArg(Type.BEAN, beanType, null);
     }
 
-    public static ConstructorArg beanType(Class<?> t) {
-        return new ConstructorArg(Type.BEAN, null, t);
+    public static ConstructorArg value(String expression) { // @Value("${http.timeout:5000}")
+        return new ConstructorArg(Type.VALUE, null, expression);
     }
 }

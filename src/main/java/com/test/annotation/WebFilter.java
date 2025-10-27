@@ -5,9 +5,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
 @Component
-public @interface RestController {
-    String path() default "";
+public @interface WebFilter {
+    String path() default "/*";
+    int order() default 0;
 }

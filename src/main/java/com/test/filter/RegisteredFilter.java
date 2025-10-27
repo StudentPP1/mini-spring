@@ -29,4 +29,13 @@ public class RegisteredFilter implements FilterRegistration {
         log.debug("add {} mapping for filter: {}", urlPattern, name);
         this.map.addAll(List.of(urlPattern));
     }
+
+    @Override
+    public String toString() {
+        return "RegisteredFilter{" +
+                "name='" + name + '\'' +
+                ", filter=" + filter +
+                ", map=" + map +
+                '}';
+    }
 }

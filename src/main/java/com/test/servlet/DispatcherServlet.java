@@ -1,33 +1,45 @@
 package com.test.servlet;
 
-import com.test.context.DefaultServletContext;
-import com.test.context.Target;
-import com.test.filter.DefaultFilterChain;
-import com.test.filter.FilterChain;
+import com.test.config.ServletConfig;
+import com.test.context.ServletContext;
+import com.test.http.mapping.HandlerHttpMapping;
 import com.test.http.HttpRequest;
 import com.test.http.HttpResponse;
-import com.test.initializer.ServletContextInitializer;
+import com.test.http.HttpStatus;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.util.List;
+public class DispatcherServlet implements Servlet {
+    private static final Logger log = LogManager.getLogger(DispatcherServlet.class);
+    private ServletContext context;
+    private HandlerHttpMapping mapping;
 
-public class DispatcherServlet {
-    private final DefaultServletContext context = new DefaultServletContext();
-    private final List<ServletContextInitializer> initializers;
-
-    public DispatcherServlet(List<ServletContextInitializer> initializers) {
-        this.initializers = initializers;
+    @Override
+    public void init(ServletConfig config) {
+        log.debug("init dispatcher servlet");
+        this.context = config.getServletContext();
+        this.mapping = this.context.getAttribute("handlerHttpMapping", HandlerHttpMapping.class);
+        log.debug("load mapping from context");
+        if (mapping == null) throw new IllegalStateException("handlerHttpMapping not set");
     }
 
-    public void init() throws Exception {
-        for (var initializer : initializers) initializer.onStartup(context);
-        context.initAll();
+    @Override
+    public void service(HttpRequest request, HttpResponse response) {
+        try {
+            log.debug("DispatcherServlet handle: {}", request.getPath());
+            boolean handled = mapping.handle(request, response);
+            if (!handled) {
+                errorResponse(request, response);
+            }
+        } catch (Exception _) {
+            errorResponse(request, response);
+        }
     }
 
-    public void handle(HttpRequest request, HttpResponse response) throws Exception {
-        Target target = context.findTarget(request.getPath());
-        FilterChain filterChain = new DefaultFilterChain(target.filters(), target.servlet());
-        filterChain.doFilter(request, response);
+    private void errorResponse(HttpRequest request, HttpResponse response) {
+        response.setHttpStatus(HttpStatus.NOT_FOUND);
+        response.setBody("No handler for " + request.getMethod() + " " + request.getPath());
     }
 
-    public void destroy() { context.destroyAll(); }
+    @Override public void destroy() {}
 }

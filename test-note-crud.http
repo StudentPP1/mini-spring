@@ -8,7 +8,7 @@ Content-Type: application/json
 }
 
 ### GET requets
-GET http://localhost:8080/note/all
+GET http://localhost:8080/note/1
 
 ### PUT requets
 PUT http://localhost:8080/note/update
@@ -21,7 +21,7 @@ Content-Type: application/json
 }
 
 ### GET requets
-GET http://localhost:8080/note/all
+GET http://localhost:8080/note/1
 
 ### DELETE requets
-DELETE http://localhost:8080/note/delete/1
+DELETE http://localhost:8080/note/1

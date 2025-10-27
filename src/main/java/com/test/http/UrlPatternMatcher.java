@@ -1,16 +1,23 @@
 package com.test.http;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.List;
 
 public final class UrlPatternMatcher {
+    private static final Logger log = LogManager.getLogger(UrlPatternMatcher.class);
+
     private UrlPatternMatcher() {}
     private static final String ALL_PATH_PATTERN = "/*";
     public static boolean matches(List<String> patterns, String path) {
         for (var pattern : patterns) {
             if (match(pattern, path)) {
+                log.trace("find matches for path: {} in patterns: {}", path, patterns);
                 return true;
             }
         }
+        log.trace("not found matches for path: {} in patterns: {}", path, patterns);
         return false;
     }
 

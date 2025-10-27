@@ -91,7 +91,7 @@ public final class DefaultServletContext implements ServletContext, ServletConfi
                 .filter(f -> UrlPatternMatcher.matches(f.mappings(), path))
                 .map(RegisteredFilter::filter)
                 .toList();
-        log.debug("find filters: {}", filters.stream().map(RegisteredFilter::getName));
+        log.debug("find filters: {}", filters);
         return new Target(servlet.servlet(), chainFilters);
     }
 }
