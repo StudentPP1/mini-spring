@@ -1,0 +1,31 @@
+package org.spring.demo;
+
+public class NoteDto {
+    private String title;
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    private String content;
+    public NoteDto(String title, String content) {
+        this.title = title;
+        this.content = content;
+    }
+
+    // for object mapper
+    public NoteDto() {
+    }
+}
