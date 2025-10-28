@@ -15,13 +15,13 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public final class ApplicationInitializer implements ServletContextInitializer {
+public record ApplicationInitializer(String basePackage) implements ServletContextInitializer {
     private static final Logger log = LogManager.getLogger(ApplicationInitializer.class);
 
     @Override
-    public void onStartup(ServletContext ctx) throws Exception {
+    public void onStartup(ServletContext ctx) {
         log.trace("start up app");
-        AppContext context = new AppContext("com.test");
+        AppContext context = new AppContext(basePackage);
         log.trace("context created");
         HandlerHttpMapping mapping = new HandlerHttpMapping();
         for (Object bean : context.getFactory().getAllBeans()) {
