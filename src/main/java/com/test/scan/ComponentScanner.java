@@ -16,7 +16,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public final class ComponentScanner {
     private static final Logger log = LogManager.getLogger(ComponentScanner.class);
@@ -33,7 +32,7 @@ public final class ComponentScanner {
                 .toList();
         return componentClasses.stream()
                 .map(component -> createBeanDefinition(component, componentClasses))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private static List<Class<?>> findClassesIn(String basePackage) throws IOException, ClassNotFoundException {
@@ -61,18 +60,13 @@ public final class ComponentScanner {
     private static boolean isComponent(Class<?> element, Set<Class<?>> seenAnnotations) {
         if (element.isAnnotationPresent(Component.class)) return true;
         Annotation[] annotations = element.getAnnotations();
-        for (int i = 0, annotationsLength = annotations.length; i < annotationsLength; i++) {
-            Annotation annotation = annotations[i];
+        for (Annotation annotation : annotations) {
             Class<? extends Annotation> annotationType = annotation.annotationType();
             // avoid cycle & system annotation
             if (!seenAnnotations.add(annotationType)) continue;
             if (annotationType.getPackageName().startsWith("java.lang")) continue;
-            if (annotationType.isAnnotationPresent(Component.class)) {
-                log.trace("element: {} is component", element.getName());
-                return true;
-            }
-            // recursive for sub annotation
-            if (isComponent(annotationType, seenAnnotations)) {
+            // if annotation has @Component or recursive for sub annotation
+            if (annotationType.isAnnotationPresent(Component.class) || isComponent(annotationType, seenAnnotations)) {
                 log.trace("element: {} is component", element.getName());
                 return true;
             }
@@ -116,9 +110,9 @@ public final class ComponentScanner {
                 try {
                     var method = annotationType.getMethod("name");
                     Object value = method.invoke(annotation);
-                    if (value instanceof String s && !s.isEmpty()) {
-                        log.trace("resolve name: {} for element: {}", s, element);
-                        return s;
+                    if (value instanceof String name && !name.isEmpty()) {
+                        log.trace("name: {} for element: {}", name, element);
+                        return name;
                     }
                 } catch (Exception _) {
                     // name in child of Component annotation can be null

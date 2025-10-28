@@ -9,7 +9,7 @@ import com.test.http.HttpResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-@WebFilter(path = "/*", order = -1)
+@WebFilter(order = -1)
 public class LoggingFilter implements Filter {
 
     private static final Logger log = LogManager.getLogger(LoggingFilter.class);

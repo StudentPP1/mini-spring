@@ -44,8 +44,13 @@ public class SocketThreadPool {
 
     void release(SocketThread worker) {
         if (isPoolWorking.get()) {
-            pool.offer(worker);
-            LOGGER.trace("Thread {} released to pool. Pool size: {}", worker.getName(), pool.size());
+            boolean result = pool.offer(worker);
+            LOGGER.trace(
+                    "Thread {} {} released to pool. Pool size: {}",
+                    worker.getName(),
+                    result ? "" : "NOT",
+                    pool.size()
+            );
         }
     }
 }

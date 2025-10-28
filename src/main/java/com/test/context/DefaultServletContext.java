@@ -59,7 +59,8 @@ public final class DefaultServletContext implements ServletContext, ServletConfi
         return Map.of();
     }
 
-    public void initAll() throws Exception {
+    @Override
+    public void init() throws Exception {
         // get init parameters for each object
         // for example open connection with db in servet
         for (var f : filters) {
@@ -71,8 +72,8 @@ public final class DefaultServletContext implements ServletContext, ServletConfi
             s.servlet().init(this);
         }
     }
-
-    public void destroyAll() {
+    @Override
+    public void destroy() {
         // destroy all before close container
         // for example call destroy method in servlet that close connection with db
         log.debug("destroy each servlet & filter");

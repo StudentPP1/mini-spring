@@ -10,4 +10,6 @@ public interface ServletContext {
     <T> T getAttribute(String key, Class<T> type);
     ServletRegistration registerServlet(String name, Servlet servlet);
     FilterRegistration registerFilter(String name, Filter filter);
+    void init() throws Exception;
+    void destroy() throws Exception;
 }

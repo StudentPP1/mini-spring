@@ -68,7 +68,11 @@ public final class BeanFactory {
 
             return bean;
         } finally {
-            creating.get().remove(name);
+            Set<String> stack = creating.get();
+            stack.remove(name);
+            if (stack.isEmpty()) {
+                creating.remove();
+            }
         }
     }
 

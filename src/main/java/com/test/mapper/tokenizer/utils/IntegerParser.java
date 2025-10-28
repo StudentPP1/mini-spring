@@ -17,7 +17,7 @@ public class IntegerParser {
             throw new RuntimeException("Digit expected at " + i);
         }
         if (chars[i] == '0') {
-            return i + 1; // тільки '0'
+            return i + 1;
         }
         while (i < len && isDigit(chars[i])) i++;
         return i;

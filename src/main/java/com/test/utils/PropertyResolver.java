@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public final class PropertyResolver {
+    private PropertyResolver() {}
     private static final Logger log = LogManager.getLogger(PropertyResolver.class);
 
     public static String resolve(String expression) {
@@ -17,11 +18,11 @@ public final class PropertyResolver {
             try {
                 return PropertiesUtils.getProperty(key);
             } catch (Exception _) {
-                log.trace("return property by default {}", defaultValue);
+                log.trace("return property by default: {}", defaultValue);
                 return defaultValue;
             }
         }
-        log.trace("return expression {}", expression);
+        log.trace("return not expression: {}", expression);
         return expression;
     }
 }

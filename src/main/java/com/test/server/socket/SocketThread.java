@@ -1,9 +1,13 @@
 package com.test.server.socket;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class SocketThread extends Thread {
+    private static final Logger log = LogManager.getLogger(SocketThread.class);
     private final SocketThreadPool parentPool;
     private final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>();
 
@@ -14,6 +18,7 @@ public class SocketThread extends Thread {
     }
 
     public void assign(Runnable task) throws InterruptedException {
+        log.trace("{} add task: {} to list", Thread.currentThread().getName(), task);
         tasks.put(task);
     }
 
@@ -28,8 +33,9 @@ public class SocketThread extends Thread {
                     parentPool.release(this);
                 }
             }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+        } catch (InterruptedException _) {
+            log.trace("{} interrupted", Thread.currentThread().getName());
+            Thread.currentThread().interrupt();
         }
     }
 }

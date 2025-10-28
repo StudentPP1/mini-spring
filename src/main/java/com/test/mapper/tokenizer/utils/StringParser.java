@@ -5,16 +5,28 @@ import com.test.mapper.tokenizer.Token;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Map;
+import java.util.function.Consumer;
+
 import static com.test.mapper.tokenizer.TokenType.FIELD_NAME;
 import static com.test.mapper.tokenizer.TokenType.STRING_VALUE;
 import static com.test.mapper.tokenizer.utils.HexParser.hexToChar;
 import static java.lang.Character.isWhitespace;
 
-public class StringParser {
+public final class StringParser {
     private static final Logger log = LogManager.getLogger(StringParser.class);
+    private static final Map<Character, Consumer<StringBuilder>> SIMPLE_ESCAPES = Map.of(
+            '"', sb -> sb.append('"'),
+            '\\', sb -> sb.append('\\'),
+            '/', sb -> sb.append('/'),
+            'b', sb -> sb.append('\b'),
+            'f', sb -> sb.append('\f'),
+            'n', sb -> sb.append('\n'),
+            'r', sb -> sb.append('\r'),
+            't', sb -> sb.append('\t')
+    );
 
     private StringParser() {
-
     }
 
     public static int skipWhitespace(char[] chars, int pos) {
@@ -27,41 +39,19 @@ public class StringParser {
             throw new RuntimeException("Bad escape at end");
         }
         char escape = chars[i++];
-        switch (escape) {
-            case '"':
-                value.append('"');
-                return i;
-            case '\\':
-                value.append('\\');
-                return i;
-            case '/':
-                value.append('/');
-                return i;
-            case 'b':
-                value.append('\b');
-                return i;
-            case 'f':
-                value.append('\f');
-                return i;
-            case 'n':
-                value.append('\n');
-                return i;
-            case 'r':
-                value.append('\r');
-                return i;
-            case 't':
-                value.append('\t');
-                return i;
-            case 'u': {
-                if (i + 4 > chars.length)
-                    throw new RuntimeException("Invalid unicode escape at " + (i - 2));
-                int hexChar = hexToChar(chars[i], chars[i + 1], chars[i + 2], chars[i + 3]);
-                value.append(hexChar);
-                return i + 4;
-            }
-            default:
-                throw new RuntimeException("Unknown escape: \\" + escape);
+        Consumer<StringBuilder> action = SIMPLE_ESCAPES.get(escape);
+        if (action != null) {
+            action.accept(value);
+            return i;
         }
+        if (escape == 'u') {
+            if (i + 4 > chars.length)
+                throw new RuntimeException("Invalid unicode escape at " + (i - 2));
+            int hexChar = hexToChar(chars[i], chars[i + 1], chars[i + 2], chars[i + 3]);
+            value.append(hexChar);
+            return i + 4;
+        }
+        throw new RuntimeException("Unknown escape: \\" + escape);
     }
 
     public static Parsed<Token> parseStringToken(int afterQuote, char[] chars, StringBuilder value) {

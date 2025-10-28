@@ -19,7 +19,7 @@ public final class ApplicationInitializer implements ServletContextInitializer {
     private static final Logger log = LogManager.getLogger(ApplicationInitializer.class);
 
     @Override
-    public void onStartup(ServletContext ctx) {
+    public void onStartup(ServletContext ctx) throws Exception {
         log.trace("start up app");
         AppContext context = new AppContext("com.test");
         log.trace("context created");

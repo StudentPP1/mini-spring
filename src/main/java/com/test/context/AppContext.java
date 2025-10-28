@@ -13,6 +13,7 @@ public class AppContext {
             var definitions = ComponentScanner.scan(basePackage);
             this.factory = new BeanFactory(definitions);
             this.factory.addPostProcessor(new DefaultBeanPostProcessor());
+            // we can scan BeanPostProcessor because it's Component -> find them
             definitions.stream()
                     .filter(definition -> BeanPostProcessor.class.isAssignableFrom(definition.beanClass()))
                     .forEach(definition -> {
