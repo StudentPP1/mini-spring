@@ -1,14 +1,14 @@
 package org.spring.hibernate.connection;
 
 import lombok.SneakyThrows;
-import org.postgresql.ds.PGConnectionPoolDataSource;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.spring.utils.PropertiesUtils;
 
 import java.sql.Connection;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class PooledDataSource extends PGConnectionPoolDataSource {
+public class PooledDataSource extends PGSimpleDataSource {
     private final Queue<Connection> connectionPool;
 
     @SneakyThrows
@@ -26,6 +26,6 @@ public class PooledDataSource extends PGConnectionPoolDataSource {
 
     @Override
     public Connection getConnection() {
-        return this.connectionPool.peek();
+        return this.connectionPool.poll();
     }
 }
