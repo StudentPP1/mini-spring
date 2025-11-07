@@ -3,10 +3,9 @@ package org.spring.hibernate.transaction;
 /**
  * Defines how transactional methods behave when invoked inside or outside
  * of an existing transaction context.
- *
  * In JDBC terms:
  *  - "create transaction" means setAutoCommit(false) and commit/rollback manually;
- *  - "without transaction" means leave autoCommit=true (each statement is its own transaction).
+ *  - "without transaction" means leave autoCommit=true (each statement is its own default transaction managed by database).
  */
 public enum Propagation {
 
