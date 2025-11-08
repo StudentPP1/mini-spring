@@ -1,6 +1,15 @@
 package org.spring.demo;
 
+import lombok.Getter;
+import lombok.Setter;
+import org.spring.hibernate.annotation.Entity;
+import org.spring.hibernate.annotation.Id;
+
+@Setter
+@Getter
+@Entity
 public class Note {
+    @Id
     private Long id;
     private String title;
     private String content;
@@ -12,30 +21,6 @@ public class Note {
 
     public Note() {
 
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     @Override

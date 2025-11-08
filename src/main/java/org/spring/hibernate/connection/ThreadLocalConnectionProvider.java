@@ -20,6 +20,7 @@ public class ThreadLocalConnectionProvider implements ConnectionProvider {
     @Override
     public void unbind() {
         connection.remove();
+        transactionActive.remove();
     }
 
     @Override
@@ -39,8 +40,19 @@ public class ThreadLocalConnectionProvider implements ConnectionProvider {
         return connection.get();
     }
 
-    public void markTransaction(boolean isActive) {
-        transactionActive.set(isActive);
+    @Override
+    public void setTransactionActive(boolean active) {
+        transactionActive.set(active);
+    }
+
+    @Override
+    public boolean isTransactionActive() {
+        return Boolean.TRUE.equals(transactionActive.get());
+    }
+
+    @Override
+    public boolean isExistConnection() {
+        return connection.get() != null;
     }
 
     @Override

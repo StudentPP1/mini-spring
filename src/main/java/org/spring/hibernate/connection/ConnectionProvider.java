@@ -8,4 +8,7 @@ public interface ConnectionProvider {
     void release(boolean force);
     void bind(Connection c);
     void unbind();
+    void setTransactionActive(boolean active);
+    boolean isTransactionActive();
+    boolean isExistConnection();
 }

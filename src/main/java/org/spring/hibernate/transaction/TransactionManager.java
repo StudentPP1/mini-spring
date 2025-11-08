@@ -42,7 +42,7 @@ public class TransactionManager {
         }
         try {
             if (ctx.isRollbackOnly()) {
-                rollback();
+                transactionRollback(ctx);
                 throw new RuntimeException("Transaction marked as rollback-only");
             }
             ctx.getConnection().commit();
@@ -85,11 +85,12 @@ public class TransactionManager {
         TransactionContext ctx = new TransactionContext(null, 0, false, null, null);
         Connection connection = provider.get();
         Integer prevIsolation = connection.getTransactionIsolation();
-        connection.setTransactionIsolation(def.isolation().getLevel());
-        Boolean prevReadOnly = null;
-        if (def.readOnly()) {
-            prevReadOnly = connection.isReadOnly();
-            connection.setReadOnly(true);
+        Boolean prevReadOnly = connection.isReadOnly();
+        if (def.isolation().getLevel() != prevIsolation) {
+            connection.setTransactionIsolation(def.isolation().getLevel());
+        }
+        if (def.readOnly() != prevReadOnly) {
+            connection.setReadOnly(def.readOnly());
         }
         connection.setAutoCommit(false);
         ctx.setConnection(connection);
@@ -97,11 +98,13 @@ public class TransactionManager {
         ctx.setPrevIsolation(prevIsolation);
         ctx.setPrevReadOnly(prevReadOnly);
         current.set(ctx);
+        provider.setTransactionActive(true);
     }
 
     private void beginRequiresNew(TransactionDefinition def) throws SQLException {
         if (isActive()) {
             paused.get().push(current.get());
+            provider.setTransactionActive(false);
             provider.unbind();
             current.remove();
         }
@@ -110,12 +113,17 @@ public class TransactionManager {
 
     private void restoreAndRelease(TransactionContext ctx) {
         try {
-            ctx.getConnection().setReadOnly(ctx.getPrevReadOnly());
-            ctx.getConnection().setTransactionIsolation(ctx.getPrevIsolation());
+            if (ctx.getPrevReadOnly() != null) {
+                ctx.getConnection().setReadOnly(ctx.getPrevReadOnly());
+            }
+            if (ctx.getPrevIsolation() != null) {
+                ctx.getConnection().setTransactionIsolation(ctx.getPrevIsolation());
+            }
             ctx.getConnection().setAutoCommit(true);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         } finally {
+            provider.setTransactionActive(false);
             provider.release(true);
             current.remove();
         }
@@ -127,6 +135,7 @@ public class TransactionManager {
             TransactionContext prev = stack.pop();
             current.set(prev);
             provider.bind(prev.getConnection());
+            provider.setTransactionActive(true);
         } else {
             paused.remove();
         }
