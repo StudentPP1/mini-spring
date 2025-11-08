@@ -1,5 +1,7 @@
 package org.spring.hibernate.transaction;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spring.hibernate.connection.ConnectionProvider;
 
 import java.sql.Connection;
@@ -8,6 +10,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 public class TransactionManager {
+    private static final Logger log = LogManager.getLogger(TransactionManager.class);
     private final ConnectionProvider provider;
     private final ThreadLocal<TransactionContext> current = new ThreadLocal<>();
     private final ThreadLocal<Deque<TransactionContext>> paused = ThreadLocal.withInitial(ArrayDeque::new);
@@ -17,11 +20,14 @@ public class TransactionManager {
     }
 
     public void begin(TransactionDefinition def) throws SQLException {
+        log.debug("current transaction definition: {}", def.propagation());
         switch (def.propagation()) {
             case REQUIRED -> beginRequired(def);
             case REQUIRES_NEW -> beginRequiresNew(def);
             case SUPPORTS -> {
-                if (isActive()) current().setDepth(current().getDepth() + 1);
+                if (isActive()) {
+                    current().setDepth(current().getDepth() + 1);
+                }
             }
             case MANDATORY -> {
                 if (!isActive()) throw new IllegalStateException("Transaction required (MANDATORY)");
@@ -77,6 +83,7 @@ public class TransactionManager {
         if (!isActive()) {
             createNewTransaction(def);
         } else {
+            log.debug("keep in current transaction, just go deeper: {}", current().getDepth() + 1);
             current().setDepth(current().getDepth() + 1);
         }
     }
@@ -99,10 +106,12 @@ public class TransactionManager {
         ctx.setPrevReadOnly(prevReadOnly);
         current.set(ctx);
         provider.setTransactionActive(true);
+        log.debug("created new transaction with depth: 1");
     }
 
     private void beginRequiresNew(TransactionDefinition def) throws SQLException {
         if (isActive()) {
+            log.debug("paused current transaction");
             paused.get().push(current.get());
             provider.setTransactionActive(false);
             provider.unbind();

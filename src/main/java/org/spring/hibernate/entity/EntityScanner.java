@@ -1,5 +1,7 @@
 package org.spring.hibernate.entity;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spring.hibernate.annotation.Column;
 import org.spring.hibernate.annotation.Entity;
 import org.spring.hibernate.annotation.Id;
@@ -14,6 +16,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class EntityScanner {
+    private static final Logger log = LogManager.getLogger(EntityScanner.class);
+
     private EntityScanner() {}
 
     public static Map<Class<?>, EntityMetadata> scan(String basePackage) throws IOException, ClassNotFoundException {
@@ -25,6 +29,7 @@ public final class EntityScanner {
     private static List<Class<?>> findClassesIn(String basePackage) throws IOException, ClassNotFoundException {
         List<Class<?>> classes = new ArrayList<>();
         String path = basePackage.replace(".", "/");
+        log.trace("find entities in path: {}", path);
         ClassLoader loader = Thread.currentThread().getContextClassLoader();
         Enumeration<URL> directories = loader.getResources(path);
         while (directories.hasMoreElements()) {
@@ -71,6 +76,7 @@ public final class EntityScanner {
                 columns.put(columnName, field);
             }
         }
+        log.trace("get metadata from entity: {}", element.getSimpleName());
         return new EntityMetadata(tableName, idField, idColumn, columns);
     }
 

@@ -1,5 +1,7 @@
 package org.spring.hibernate.interceptor;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spring.bean.BeanPostProcessor;
 import org.spring.hibernate.annotation.Transactional;
 import org.spring.hibernate.session.SessionFactory;
@@ -7,9 +9,8 @@ import org.spring.hibernate.transaction.TransactionManager;
 
 import java.lang.reflect.Proxy;
 
-// TODO: init hibernate at startup app
-// TODO: register as BeanPostProcessors
 public class TransactionalBeanPostProcessor implements BeanPostProcessor {
+    private static final Logger log = LogManager.getLogger(TransactionalBeanPostProcessor.class);
     private final TransactionManager transactionManager;
     private final SessionFactory sessionFactory;
 
@@ -27,6 +28,7 @@ public class TransactionalBeanPostProcessor implements BeanPostProcessor {
             if (interfaces.length == 0) {
                 throw new IllegalStateException("Transactional bean must implement at least one interface: " + targetClass);
             }
+            log.trace("create new transactional proxy for {}", targetClass.getSimpleName());
             return Proxy.newProxyInstance(
                     targetClass.getClassLoader(),
                     interfaces,

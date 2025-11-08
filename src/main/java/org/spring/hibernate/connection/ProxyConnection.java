@@ -6,14 +6,7 @@ import java.util.Properties;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 
-public class ProxyConnection implements Connection {
-    private final Connection phisicalConnection;
-    private final Queue<Connection> connectionPool;
-
-    public ProxyConnection(Connection phisicalConnection, Queue<Connection> connectionPool) {
-        this.connectionPool = connectionPool;
-        this.phisicalConnection = phisicalConnection;
-    }
+public record ProxyConnection(Connection phisicalConnection, Queue<Connection> connectionPool) implements Connection {
 
     @Override
     public void rollback() throws SQLException {

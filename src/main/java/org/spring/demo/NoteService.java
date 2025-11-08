@@ -1,27 +1,11 @@
 package org.spring.demo;
 
-import org.spring.annotation.Service;
+public interface NoteService {
+    Note createNote(NoteDto noteDto);
 
-@Service
-public class NoteService {
+    void deleteNote(Long id);
 
-    public Note createNote(NoteDto noteDto) {
-        Note note = new Note();
-        note.setId(1L);
-        note.setTitle(noteDto.getTitle());
-        note.setContent(noteDto.getContent());
-        return note;
-    }
+    NoteDto updateNote(Note note);
 
-    public void deleteNote(Long id) {
-
-    }
-
-    public NoteDto updateNote(Note note) {
-        return new NoteDto(note.getTitle(), note.getContent());
-    }
-
-    public NoteDto getNote(Long id) {
-        return new NoteDto("title", "content");
-    }
+    NoteDto getNote(Long id);
 }

@@ -4,11 +4,15 @@ import lombok.Getter;
 import lombok.Setter;
 import org.spring.hibernate.annotation.Entity;
 import org.spring.hibernate.annotation.Id;
+import org.spring.hibernate.annotation.Table;
+
+import java.io.Serializable;
 
 @Setter
 @Getter
 @Entity
-public class Note {
+@Table(name = "notes")
+public class Note implements Serializable {
     @Id
     private Long id;
     private String title;

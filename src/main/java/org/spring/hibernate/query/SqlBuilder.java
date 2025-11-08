@@ -1,4 +1,4 @@
-package org.spring.hibernate.session;
+package org.spring.hibernate.query;
 
 import org.spring.hibernate.entity.EntityMetadata;
 

@@ -4,10 +4,11 @@ import lombok.Getter;
 import org.spring.hibernate.session.Session;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.Optional;
 
-public abstract class BaseRepository<K extends Serializable, E extends Serializable>
-        implements Repository<K, E> {
+public abstract class BaseRepository<E extends Serializable, K extends Serializable>
+        implements Repository<E, K> {
 
     private final Class<E> entityClass;
 
@@ -39,5 +40,9 @@ public abstract class BaseRepository<K extends Serializable, E extends Serializa
     @Override
     public Optional<E> findById(K id) {
         return Optional.ofNullable(session.find(entityClass, id));
+    }
+
+    public List<E> findAll() {
+        return session.createQuery("FROM " + entityClass.getSimpleName(), entityClass).list();
     }
 }

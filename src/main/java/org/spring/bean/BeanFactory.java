@@ -1,11 +1,18 @@
 package org.spring.bean;
 
-import org.spring.utils.PropertyResolver;
-import org.spring.utils.SimpleTypeConverter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spring.annotation.Repository;
+import org.spring.hibernate.connection.ConnectionProvider;
+import org.spring.hibernate.session.Session;
+import org.spring.hibernate.session.SessionFactory;
+import org.spring.utils.PropertyResolver;
+import org.spring.utils.SimpleTypeConverter;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public final class BeanFactory {
     private static final Logger log = LogManager.getLogger(BeanFactory.class);
@@ -27,13 +34,24 @@ public final class BeanFactory {
     public void preInstanceSingletons() {
         log.trace("create instance for singletons");
         for (BeanDefinition definition : this.definitions.values()) {
+            log.trace("definition: {}", definition);
             if (definition.isSingleton()) {
                 singletons.putIfAbsent(definition.name(), createBean(definition.name(), definition));
             }
         }
     }
 
+    public void registerSingleton(String name, Object instance) {
+        if (singletons.containsKey(name)) {
+            throw new IllegalStateException("Bean with name '" + name + "' already registered");
+        }
+        singletons.put(name, instance);
+    }
+
     public Object getBean(String name) {
+        if (singletons.containsKey(name)) {
+            return singletons.get(name);
+        }
         BeanDefinition def = definitions.get(name);
         if (def.isSingleton()) {
             return singletons.computeIfAbsent(name, n -> createBean(n, def));
@@ -42,6 +60,9 @@ public final class BeanFactory {
     }
 
     public <T> T getBean(String name, Class<T> type) {
+        if (singletons.containsKey(name)) {
+            return (T) singletons.get(name);
+        }
         Object bean = getBean(name);
         if (!type.isInstance(bean))
             throw new ClassCastException("Bean '" + name + "' is not " + type.getName());
@@ -65,7 +86,6 @@ public final class BeanFactory {
             for (BeanPostProcessor p : postProcessors) {
                 bean = p.postProcessAfterInitialization(bean, name);
             }
-
             return bean;
         } finally {
             Set<String> stack = creating.get();
@@ -78,6 +98,9 @@ public final class BeanFactory {
 
     private Object instantiateViaConstructor(BeanDefinition definition) {
         Class<?> classBean = definition.beanClass();
+        if (classBean.isAnnotationPresent(Repository.class)) {
+            return createRepository(classBean);
+        }
         var constructors = new ArrayList<>(List.of(classBean.getDeclaredConstructors()));
         constructors.sort(Comparator.comparingInt(c -> -c.getParameterCount()));
         for (var constructor : constructors) {
@@ -101,6 +124,25 @@ public final class BeanFactory {
             return noArg.newInstance();
         } catch (Exception e) {
             throw new IllegalStateException("No suitable constructor for " + classBean.getName(), e);
+        }
+    }
+
+    private Object createRepository(Class<?> classBean) {
+        log.trace("create repository");
+        var superType = classBean.getGenericSuperclass();
+        if (!(superType instanceof ParameterizedType pt)) {
+            throw new IllegalStateException("Repository must extend BaseRepository<ID, E>");
+        }
+        Class<?> entityClass = (Class<?>) pt.getActualTypeArguments()[0];
+        SessionFactory sessionFactory = getBean("sessionFactory", SessionFactory.class);
+        Session session = sessionFactory.openSession();
+        log.trace("inject entity: {} & session: {}", entityClass, session);
+        try {
+            var ctor = classBean.getDeclaredConstructor(Class.class, Session.class);
+            ctor.setAccessible(true);
+            return ctor.newInstance(entityClass, session);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to instantiate " + classBean.getName(), e);
         }
     }
 
