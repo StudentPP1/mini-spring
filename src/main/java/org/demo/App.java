@@ -1,4 +1,4 @@
-package org.spring;
+package org.demo;
 
 import org.spring.annotation.SpringBootApplication;
 import org.spring.initializer.SpringApplication;

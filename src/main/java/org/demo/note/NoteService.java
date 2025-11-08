@@ -1,4 +1,4 @@
-package org.spring.demo;
+package org.demo.note;
 
 public interface NoteService {
     Note createNote(NoteDto noteDto);

@@ -1,4 +1,4 @@
-package org.spring.demo;
+package org.demo.note;
 
 import org.spring.annotation.Repository;
 import org.spring.hibernate.repository.BaseRepository;

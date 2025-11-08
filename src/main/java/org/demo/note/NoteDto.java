@@ -1,4 +1,4 @@
-package org.spring.demo;
+package org.demo.note;
 
 public class NoteDto {
     private String title;

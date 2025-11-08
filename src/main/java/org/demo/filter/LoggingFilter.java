@@ -1,4 +1,4 @@
-package org.spring.demo;
+package org.demo.filter;
 
 import org.spring.annotation.WebFilter;
 import org.spring.config.ServletConfig;
