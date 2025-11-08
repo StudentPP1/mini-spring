@@ -1,5 +1,7 @@
 package org.spring.initializer;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spring.annotation.RestController;
 import org.spring.annotation.WebFilter;
 import org.spring.context.AppContext;
@@ -8,8 +10,6 @@ import org.spring.filter.Filter;
 import org.spring.filter.FilterEntry;
 import org.spring.http.mapping.HandlerHttpMapping;
 import org.spring.servlet.DispatcherServlet;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Comparator;

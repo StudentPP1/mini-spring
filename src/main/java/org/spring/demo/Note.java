@@ -1,6 +1,19 @@
 package org.spring.demo;
 
-public class Note {
+import lombok.Getter;
+import lombok.Setter;
+import org.spring.hibernate.annotation.Entity;
+import org.spring.hibernate.annotation.Id;
+import org.spring.hibernate.annotation.Table;
+
+import java.io.Serializable;
+
+@Setter
+@Getter
+@Entity
+@Table(name = "notes")
+public class Note implements Serializable {
+    @Id
     private Long id;
     private String title;
     private String content;
@@ -12,30 +25,6 @@ public class Note {
 
     public Note() {
 
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     @Override
