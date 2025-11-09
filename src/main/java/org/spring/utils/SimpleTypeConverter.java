@@ -52,7 +52,7 @@ public final class SimpleTypeConverter {
         try {
             Object value = converter.apply(raw);
             return target.cast(value);
-        } catch (Exception _) {
+        } catch (Exception ignored) {
             throw new IllegalArgumentException("No converter for " + target.getName());
         }
     }

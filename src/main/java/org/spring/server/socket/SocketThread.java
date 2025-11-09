@@ -33,7 +33,7 @@ public class SocketThread extends Thread {
                     parentPool.release(this);
                 }
             }
-        } catch (InterruptedException _) {
+        } catch (InterruptedException ignored) {
             log.trace("{} interrupted", Thread.currentThread().getName());
             Thread.currentThread().interrupt();
         }

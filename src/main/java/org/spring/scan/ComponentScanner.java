@@ -114,7 +114,7 @@ public final class ComponentScanner {
                         log.trace("name: {} for element: {}", name, element);
                         return name;
                     }
-                } catch (Exception _) {
+                } catch (Exception ignored) {
                     // name in child of Component annotation can be null
                 }
             }

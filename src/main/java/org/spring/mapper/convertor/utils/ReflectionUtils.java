@@ -29,7 +29,7 @@ public class ReflectionUtils {
             try {
                 return currentClass.getDeclaredField(name);
             }
-            catch (NoSuchFieldException _) {
+            catch (NoSuchFieldException ignored) {
                 currentClass = currentClass.getSuperclass();
             }
         }

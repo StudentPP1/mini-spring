@@ -31,7 +31,7 @@ public class DispatcherServlet implements Servlet {
             if (!handled) {
                 errorResponse(request, response);
             }
-        } catch (Exception _) {
+        } catch (Exception ignored) {
             errorResponse(request, response);
         }
     }

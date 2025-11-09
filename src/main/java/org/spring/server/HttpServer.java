@@ -47,10 +47,10 @@ public final class HttpServer implements AutoCloseable {
                         findAndRunServlet(request, response);
                         outputStream.write(response.toByteArray());
                         outputStream.flush();
-                    } catch (final Exception _) {
+                    } catch (final Exception ignored1) {
                         try {
                             write500(client);
-                        } catch (final Exception _) {
+                        } catch (final Exception ignored2) {
                         }
                     }
                 });

@@ -143,7 +143,8 @@ public class DefaultSession implements Session {
         if (closed) return;
         closed = true;
         if (!transactionManager.isActive()) {
-            try { connectionProvider.release(true); } catch (Exception _) {}
+            try { connectionProvider.release(true); }
+            catch (Exception ignored) {}
         }
         cache.clear();
     }

@@ -17,7 +17,7 @@ public final class PropertyResolver {
             String defaultValue = (colonIndex >= 0) ? body.substring(colonIndex + 1) : null;
             try {
                 return PropertiesUtils.getProperty(key);
-            } catch (Exception _) {
+            } catch (Exception ignored) {
                 log.trace("return property by default: {}", defaultValue);
                 return defaultValue;
             }
