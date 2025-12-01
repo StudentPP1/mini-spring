@@ -8,4 +8,4 @@
 ```cmd
 mvn clean install
 ```
-+ watch [demo](https://github.com/StudentPP1/custom-spring-demo)
++ then watch [demo](https://github.com/StudentPP1/custom-spring-demo)
