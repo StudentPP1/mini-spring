@@ -3,8 +3,7 @@ package org.spring.hibernate.session;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spring.hibernate.connection.ConnectionProvider;
-import org.spring.hibernate.entity.EntityKey;
-import org.spring.hibernate.entity.EntityMetadata;
+import org.spring.hibernate.entity.*;
 import org.spring.hibernate.query.Query;
 import org.spring.hibernate.query.ResultSetParser;
 import org.spring.hibernate.query.SimpleQuery;
@@ -16,8 +15,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static java.sql.Statement.RETURN_GENERATED_KEYS;
 
@@ -49,28 +47,58 @@ public class DefaultSession implements Session {
             log.debug("get entity from cache");
             return (T) cache.get(key);
         }
-        try (PreparedStatement statement = getConnection().prepareStatement(SqlBuilder.selectById(metadata))) {
+        // mappedBy -> load List<Node> by left join (if exists)
+        String sql = SqlBuilder.selectByIdWithJoin(metadata, this.entities);
+        log.trace("generate sql: {}", sql);
+        try (PreparedStatement statement = getConnection().prepareStatement(sql)) {
             statement.setObject(1, id);
             log.trace("create find statement with id param");
             try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    T entity = ResultSetParser.parseEntity(resultSet, metadata, entityClass);
-                    cache.put(key, entity);
-                    return entity;
+                T rootEntity = null;
+                while (resultSet.next()) {
+                    if (rootEntity == null) {
+                        rootEntity = ResultSetParser.parseEntity(resultSet, metadata, entityClass, "t0_");
+                        cache.put(key, rootEntity);
+                        // load Person by @JoinColumn (if exists)
+                        fillForeignKey(metadata, resultSet, rootEntity);
+                    }
+                    ResultSetParser.parseJoinedCollections(resultSet, metadata, rootEntity, entities);
                 }
-                return null;
+                return rootEntity;
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             throw new RuntimeException("find failed for " + entityClass.getSimpleName(), e);
         }
     }
 
+    private void fillForeignKey(EntityMetadata parentMetadata, ResultSet resultSet, Object parent) throws SQLException, IllegalAccessException {
+        for (EntityField entityField : parentMetadata.fields()) {
+            if (entityField instanceof RelationField relationField && relationField.relation().isRelationOwner()) {
+                Class<?> childClass = EntityHelper.getEntityClass(relationField.field());
+                String fkColumn = "t0_" + relationField.relation().foreignKey();
+                Object fkValue = resultSet.getObject(fkColumn);
+                if (fkValue != null) {
+                    log.trace("Found foreign key {} = {}. Triggering recursive find.", fkColumn, fkValue);
+                    Object childEntity = find(childClass, fkValue);
+                    Field field = relationField.field();
+                    field.setAccessible(true);
+                    field.set(parent, childEntity);
+                }
+            }
+        }
+    }
+
+    /**
+     * save entity
+    */
     @Override
     public void persist(Object entity) {
         log.trace("call persist method in session");
         EntityMetadata metadata = getEntityMetadata(entity.getClass());
         log.debug("load entity metadata: {}", metadata);
-        try (var statement = getConnection().prepareStatement(SqlBuilder.insert(metadata), RETURN_GENERATED_KEYS)) {
+        String sql = SqlBuilder.insert(metadata);
+        log.trace("generate sql: {}", sql);
+        try (var statement = getConnection().prepareStatement(sql, RETURN_GENERATED_KEYS)) {
             log.trace("fill create statement");
             fillStatement(entity, metadata, statement);
             statement.executeUpdate();
@@ -90,6 +118,79 @@ public class DefaultSession implements Session {
             log.error(e.getMessage());
             throw new RuntimeException("persist failed", e);
         }
+        for (EntityField entityField : metadata.fields()) {
+            if (entityField instanceof RelationField relationField && !relationField.relation().isRelationOwner()) {
+                updateChildren(entity, metadata, entityField);
+            }
+        }
+    }
+
+    private void updateChildren(Object parent, EntityMetadata parentMetadata, EntityField entityField) {
+        if (entityField instanceof RelationField relationField && !relationField.relation().isRelationOwner()) {
+            try {
+                Field field = relationField.field();
+                field.setAccessible(true);
+                Object collection = field.get(parent);
+                if (!(collection instanceof Iterable<?> iterable)) return;
+
+                List<Object> currentChildIds = new ArrayList<>();
+                Class<?> childClass = EntityHelper.getEntityClass(field);
+                EntityMetadata childMeta = getEntityMetadata(childClass);
+
+                for (Object child : iterable) {
+                    Object childId = getIdValue(child, childMeta);
+                    if (childId == null) {
+                        log.trace("Child is new. Cascading INSERT to: {}", child.getClass().getSimpleName());
+                        persist(child);
+                        currentChildIds.add(getIdValue(child, childMeta));
+                    } else {
+                        log.trace("Child already exists (ID: {}). Cascading UPDATE to: {}", childId, child.getClass().getSimpleName());
+                        merge(child);
+                        currentChildIds.add(childId);
+                    }
+                }
+                Object parentId = getIdValue(parent, parentMetadata);
+                deleteOrphans(parentId, currentChildIds, childMeta, relationField);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to update collection " + entityField.name(), e);
+            }
+        }
+    }
+
+    private void deleteOrphans(Object parentId, List<Object> currentChildIds, EntityMetadata childMeta, RelationField relationField) throws SQLException {
+        // DELETE FROM note WHERE person_id = 5 AND id NOT IN (101, 102);
+        String foreignKey = getForeignKeyField(childMeta, relationField).relation().foreignKey();
+        StringBuilder sql = new StringBuilder("DELETE FROM ").append(childMeta.tableName())
+                .append(" WHERE ").append(foreignKey).append(" = ?");
+        if (!currentChildIds.isEmpty()) {
+            sql.append(" AND ").append(childMeta.idColumn()).append(" NOT IN (");
+            for (int i = 0; i < currentChildIds.size(); i++) {
+                sql.append("?");
+                if (i < currentChildIds.size() - 1) sql.append(", ");
+            }
+            sql.append(")");
+        }
+        log.trace("Executing orphan removal: {}", sql);
+        try (PreparedStatement statement = getConnection().prepareStatement(sql.toString())) {
+            int paramentIndex = 1;
+            statement.setObject(paramentIndex++, parentId);
+            for (Object childId : currentChildIds) {
+                statement.setObject(paramentIndex++, childId);
+            }
+            int deletedCount = statement.executeUpdate();
+            if (deletedCount > 0) {
+                log.debug("Deleted {} orphaned entities from {}", deletedCount, childMeta.tableName());
+            }
+        }
+    }
+
+    private static RelationField getForeignKeyField(EntityMetadata childMeta, RelationField relationField) {
+        String mappedBy = relationField.relation().mappedBy();
+        EntityField entityField = childMeta.fields().stream()
+                .filter(field -> field.field().getName().equals(mappedBy))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("MappedBy field '" + mappedBy + "' not found!"));
+        return ((RelationField) entityField);
     }
 
     @Override
@@ -112,6 +213,11 @@ public class DefaultSession implements Session {
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new RuntimeException("merge failed for " + entity.getClass().getSimpleName(), e);
+        }
+        for (EntityField entityField : metadata.fields()) {
+            if (entityField instanceof RelationField relationField && !relationField.relation().isRelationOwner()) {
+                updateChildren(entity, metadata, entityField);
+            }
         }
     }
 
@@ -143,8 +249,10 @@ public class DefaultSession implements Session {
         if (closed) return;
         closed = true;
         if (!transactionManager.isActive()) {
-            try { connectionProvider.release(true); }
-            catch (Exception ignored) {}
+            try {
+                connectionProvider.release(true);
+            } catch (Exception ignored) {
+            }
         }
         cache.clear();
     }
@@ -164,21 +272,39 @@ public class DefaultSession implements Session {
         return this.connectionProvider.get();
     }
 
-    private static Object getIdValue(Object entity, EntityMetadata m) throws NoSuchFieldException, IllegalAccessException {
+    private Object getIdValue(Object entity, EntityMetadata m) throws NoSuchFieldException, IllegalAccessException {
         Field id = entity.getClass().getDeclaredField(m.idField());
         id.setAccessible(true);
         return id.get(entity);
     }
 
-    private static int fillStatement(Object entity, EntityMetadata metadata, PreparedStatement statement) throws SQLException, IllegalAccessException {
+    private int fillStatement(Object entity, EntityMetadata metadata, PreparedStatement statement) throws SQLException, IllegalAccessException {
         int i = 1;
-        for (Map.Entry<String, Field> entry : metadata.columns().entrySet()) {
-            String columnName = entry.getKey();
-            Field field = entry.getValue();
-            if (columnName.equals(metadata.idColumn())) continue;
-            field.setAccessible(true);
-            statement.setObject(i++, field.get(entity));
-            log.trace("set columnName: {} by value: {}", columnName, field.get(entity));
+        for (EntityField entityField : metadata.fields()) {
+            try {
+                Field field = entityField.field();
+                String columnName = entityField.name();
+                if (columnName.equals(metadata.idColumn())) continue;
+                field.setAccessible(true);
+                if (entityField instanceof RelationField relationField && !relationField.relation().foreignKey().isEmpty()) {
+                    Object parentEntity = field.get(entity);
+                    if (parentEntity == null) {
+                        // TODO: if optional=false -> throw exception
+                        statement.setObject(i++, field.get(entity));
+                        log.trace("Parent entity is null, set foreign key {} to null", relationField.relation().foreignKey());
+                    } else {
+                        EntityMetadata parentMetadata = this.entities.get(parentEntity.getClass());
+                        Object parentId = getIdValue(parentEntity, parentMetadata);
+                        statement.setObject(i++, parentId);
+                        log.trace("Set foreignKey: {} by parent ID: {}", relationField.relation().foreignKey(), parentId);
+                    }
+                } else {
+                    statement.setObject(i++, field.get(entity));
+                    log.trace("set columnName: {} by value: {}", columnName, field.get(entity));
+                }
+            } catch (NoSuchFieldException e) {
+                throw new RuntimeException(e);
+            }
         }
         return i;
     }
