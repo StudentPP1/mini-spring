@@ -1,5 +1,6 @@
 package org.spring.hibernate.query;
 
+import org.spring.hibernate.annotation.FetchType;
 import org.spring.hibernate.entity.*;
 
 import java.util.ArrayList;
@@ -16,15 +17,18 @@ public final class SqlBuilder {
     private SqlBuilder() {
     }
 
+    public static String selectByColumn(String table, String column) {
+        return "SELECT * FROM %s WHERE %s = ?".formatted(table, column);
+    }
+
     public static String selectByIdWithJoin(EntityMetadata rootMeta, Map<Class<?>, EntityMetadata> entities) {
         StringBuilder select = new StringBuilder("SELECT ");
         String from = " FROM " + rootMeta.tableName() + " t0";
         StringBuilder join = new StringBuilder();
         appendAliasedColumns(select, rootMeta, "t0");
         int tableCounter = 1;
-        for (EntityField entityField : rootMeta.fields()) {
-            if (entityField instanceof RelationField relationField && !relationField.relation().isRelationOwner()) {
-                RelationData relation = relationField.relation();
+        for (RelationField relationField : rootMeta.relationFields()) {
+            if (relationField.fetchType().equals(FetchType.EAGER) && !relationField.isRelationOwner()) {
                 String childAlias = "t" + tableCounter++;
                 Class<?> childClass = EntityHelper.getEntityClass(relationField.field());
                 EntityMetadata childMeta = entities.get(childClass);
@@ -32,7 +36,7 @@ public final class SqlBuilder {
                 appendAliasedColumns(select, childMeta, childAlias);
                 join.append(" LEFT JOIN ")
                         .append(childMeta.tableName()).append(" ").append(childAlias)
-                        .append(" ON t0.").append(relation.foreignKey())
+                        .append(" ON t0.").append(relationField.foreignKey())
                         .append(" = ")
                         .append(childAlias).append(".").append(childMeta.idColumn());
             }

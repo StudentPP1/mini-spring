@@ -11,5 +11,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 public @interface ManyToOne {
-    FetchType type() default FetchType.EAGER;
+    // FetchType type() default FetchType.EAGER;
 }

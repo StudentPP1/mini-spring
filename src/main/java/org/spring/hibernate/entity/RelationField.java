@@ -1,9 +1,14 @@
 package org.spring.hibernate.entity;
 
+import org.spring.hibernate.annotation.FetchType;
+
 import java.lang.reflect.Field;
 
 public record RelationField(String name,
                             Field field,
-                            RelationData relation
+                            String foreignKey,
+                            FetchType fetchType,
+                            String mappedBy,
+                            Boolean isRelationOwner
 ) implements EntityField {
 }

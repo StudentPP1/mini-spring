@@ -3,7 +3,7 @@ package org.spring.hibernate.query;
 import java.util.List;
 
 /**
- * Simple abstraction for executing SQL/JPQL-like queries.
+ * Simple abstraction for executing SQL queries.
  * Minimal version of Hibernate's Query API.
  */
 public interface Query<T> {
@@ -17,4 +17,6 @@ public interface Query<T> {
      * Executes the query and returns a single result (or throws if not unique).
      */
     T singleResult();
+
+    Query<T> setParameter(Integer position, Object parentId);
 }

@@ -30,7 +30,7 @@ public class EntityHelper {
         if (field instanceof SimpleField simpleField) {
             return Optional.of(simpleField.name());
         } // ignore mappedBy
-        else if (field instanceof RelationField relationField && relationField.relation().isRelationOwner()) {
+        else if (field instanceof RelationField relationField && relationField.isRelationOwner()) {
             return Optional.of(relationField.name());
         }
         return Optional.empty();

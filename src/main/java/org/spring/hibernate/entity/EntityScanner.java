@@ -53,7 +53,8 @@ public final class EntityScanner {
         String tableName = resolveTableName(element);
         String idField = null;
         String idColumn = null;
-        List<EntityField> columns = new ArrayList<>();
+        List<SimpleField> simpleFields = new ArrayList<>();
+        List<RelationField> relationFields = new ArrayList<>();
         int eagerBagCount = 0;
         for (Field field : element.getDeclaredFields()) {
             String columnName = resolveColumnName(field);
@@ -65,19 +66,25 @@ public final class EntityScanner {
                 idColumn = columnName;
             }
             RelationData relationData = extractRelation(field);
-            EntityField entityField = relationData == null ? new SimpleField(
-                    columnName,
-                    field
-            ) : new RelationField(
-                    columnName,
-                    field,
-                    relationData
-            );
+            if (relationData == null) {
+                simpleFields.add(new SimpleField(
+                        columnName,
+                        field
+                ));
+            } else {
+                relationFields.add(new RelationField(
+                        columnName,
+                        field,
+                        relationData.foreignKey(),
+                        relationData.fetchType(),
+                        relationData.mappedBy(),
+                        relationData.isRelationOwner()
+                ));
+            }
             eagerBagCount = validateBagCount(element, field, relationData, eagerBagCount);
-            columns.add(entityField);
         }
         log.trace("get metadata from entity: {}", element.getSimpleName());
-        return new EntityMetadata(tableName, idField, idColumn, columns);
+        return new EntityMetadata(tableName, idField, idColumn, relationFields, simpleFields);
     }
 
     private static int validateBagCount(Class<?> element, Field field, RelationData relationData, int eagerBagCount) {
@@ -128,8 +135,8 @@ public final class EntityScanner {
         }
         // parent (Note)
         if (isManyToOne) {
-            ManyToOne manyToOne = field.getAnnotation(ManyToOne.class);
-            fetchType = manyToOne.type();
+            // TODO: FetchType.LAZY for not collection field
+            fetchType = FetchType.EAGER;
             isRelationOwner = true;
             if (isJoinColumn) {
                 JoinColumn joinColumn = field.getAnnotation(JoinColumn.class);
