@@ -52,6 +52,8 @@ public class DefaultSession implements InternalSession {
     public <T> Query<T> createQuery(String sql, Class<T> resultType) {
         if (sql.toUpperCase().startsWith("SELECT")) {
             EntityMetadata metadata = getEntityMetadata(resultType);
+            String className = resultType.getSimpleName();
+            sql = sql.replaceAll("\\b%s\\b".formatted(className), metadata.tableName());
             return new SimpleQuery<>(resultType, sql, this, metadata);
         }
         throw new UnsupportedOperationException("Only SELECT queries are supported");
