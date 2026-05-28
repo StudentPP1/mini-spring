@@ -52,9 +52,9 @@ public class EntityPersister {
             log.error(e.getMessage());
             throw new RuntimeException("persist failed", e);
         }
-        metadata.findEagerCollection()
-                .ifPresent(relationField ->
-                        updateChildren(entity, metadata, relationField));
+        metadata.getAllRelatedCollections()
+                .forEach(relationField ->
+                        saveOrUpdateChild(entity, metadata, relationField));
     }
 
     /**
@@ -80,9 +80,9 @@ public class EntityPersister {
             log.error(e.getMessage());
             throw new RuntimeException("merge failed for " + entity.getClass().getSimpleName(), e);
         }
-        metadata.findEagerCollection()
-                .ifPresent(relationField ->
-                        updateChildren(entity, metadata, relationField));
+        metadata.getAllRelatedCollections()
+                .forEach(relationField ->
+                        saveOrUpdateChild(entity, metadata, relationField));
     }
 
     /**
@@ -104,40 +104,38 @@ public class EntityPersister {
         }
     }
 
-    private void updateChildren(Object parent, EntityMetadata parentMetadata, RelationField relationField) {
+    private void saveOrUpdateChild(Object parent, EntityMetadata parentMetadata, RelationField relationField) {
         try {
             Field field = relationField.field();
             field.setAccessible(true);
             Object collection = field.get(parent);
             if (!(collection instanceof Iterable<?> iterable)) return;
-
             List<Object> currentChildIds = new ArrayList<>();
             Class<?> childClass = EntityHelper.getEntityClass(field);
             EntityMetadata childMeta = session.getEntityMetadata(childClass);
-
             for (Object child : iterable) {
                 Object childId = session.getIdValue(child, childMeta);
                 if (childId == null) {
-                    log.trace("Child is new. Cascading INSERT to: {}", child.getClass().getSimpleName());
+                    log.trace("{}: is new. Insert row to database", child.getClass().getSimpleName());
                     persist(child);
                     currentChildIds.add(session.getIdValue(child, childMeta));
                 } else {
-                    log.trace("Child already exists (ID: {}). Cascading UPDATE to: {}", childId, child.getClass().getSimpleName());
+                    log.trace("{}: is already exists. Update row in database", child.getClass().getSimpleName());
                     merge(child);
                     currentChildIds.add(childId);
                 }
             }
-            Object parentId = session.getIdValue(parent, parentMetadata);
-            deleteOrphans(parentId, currentChildIds, childMeta, relationField);
+            deleteOtherChildren(parent, parentMetadata, currentChildIds, childMeta);
         } catch (Exception e) {
             throw new RuntimeException("Failed to update collection " + relationField.name(), e);
         }
     }
 
-    private void deleteOrphans(Object parentId, List<Object> currentChildIds, EntityMetadata childMeta, RelationField relationField) throws SQLException {
-        // DELETE FROM note WHERE person_id = 5 AND id NOT IN (101, 102);
-        String foreignKey = getForeignKeyField(childMeta, relationField).foreignKey();
-        StringBuilder sql = new StringBuilder("DELETE FROM ").append(childMeta.tableName())
+    private void deleteOtherChildren(Object parent, EntityMetadata parentMetadata, List<Object> currentChildIds, EntityMetadata childMeta) throws SQLException, NoSuchFieldException, IllegalAccessException {
+        String foreignKey = childMeta.findForeignKeyBy(parent)
+                .orElseThrow(() -> new RuntimeException(parent.getClass().getSimpleName() + " hasn't mappedBy field!"));
+        StringBuilder sql = new StringBuilder("DELETE FROM ")
+                .append(childMeta.tableName())
                 .append(" WHERE ").append(foreignKey).append(" = ?");
         if (!currentChildIds.isEmpty()) {
             sql.append(" AND ").append(childMeta.idColumn()).append(" NOT IN (");
@@ -150,7 +148,7 @@ public class EntityPersister {
         log.trace("Executing orphan removal: {}", sql);
         try (PreparedStatement statement = session.getConnection().prepareStatement(sql.toString())) {
             int paramentIndex = 1;
-            statement.setObject(paramentIndex++, parentId);
+            statement.setObject(paramentIndex++, session.getIdValue(parent, parentMetadata));
             for (Object childId : currentChildIds) {
                 statement.setObject(paramentIndex++, childId);
             }
@@ -159,15 +157,6 @@ public class EntityPersister {
                 log.debug("Deleted {} orphaned entities from {}", deletedCount, childMeta.tableName());
             }
         }
-    }
-
-    private static RelationField getForeignKeyField(EntityMetadata childMeta, RelationField relationField) {
-        String mappedBy = relationField.mappedBy();
-        EntityField entityField = childMeta.fields().stream()
-                .filter(field -> field.field().getName().equals(mappedBy))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("MappedBy field '" + mappedBy + "' not found!"));
-        return ((RelationField) entityField);
     }
 
     private int fillStatement(Object entity, EntityMetadata metadata, PreparedStatement statement) throws SQLException, IllegalAccessException {
@@ -181,18 +170,18 @@ public class EntityPersister {
                 if (entityField instanceof RelationField relationField && !relationField.foreignKey().isEmpty()) {
                     Object parentEntity = field.get(entity);
                     if (parentEntity == null) {
-                        // TODO: if optional=false -> throw exception
-                        statement.setObject(i++, field.get(entity));
-                        log.trace("Parent entity is null, set foreign key {} to null", relationField.foreignKey());
+                        // TODO: if optional = false -> throw exception
+                        statement.setObject(i++, null);
+                        log.trace("parent entity is null, set foreign key {} to null", relationField.foreignKey());
                     } else {
                         EntityMetadata parentMetadata = session.getEntityMetadata(parentEntity.getClass());
                         Object parentId = session.getIdValue(parentEntity, parentMetadata);
                         statement.setObject(i++, parentId);
-                        log.trace("Set foreignKey: {} by parent ID: {}", relationField.foreignKey(), parentId);
+                        log.trace("set foreign key: {} by parent id: {}", relationField.foreignKey(), parentId);
                     }
                 } else {
                     statement.setObject(i++, field.get(entity));
-                    log.trace("set columnName: {} by value: {}", columnName, field.get(entity));
+                    log.trace("set column name: {} by value: {}", columnName, field.get(entity));
                 }
             } catch (NoSuchFieldException e) {
                 throw new RuntimeException(e);

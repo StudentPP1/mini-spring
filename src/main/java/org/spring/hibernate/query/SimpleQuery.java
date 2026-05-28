@@ -1,5 +1,7 @@
 package org.spring.hibernate.query;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spring.hibernate.entity.EntityKey;
 import org.spring.hibernate.entity.EntityMetadata;
 import org.spring.hibernate.session.EntityLoader;
@@ -10,6 +12,7 @@ import java.sql.ResultSet;
 import java.util.*;
 
 public class SimpleQuery<T> implements Query<T> {
+    private static final Logger log = LogManager.getLogger(SimpleQuery.class);
     private InternalSession session;
     private String sql;
     private Class<T> resultType;
@@ -30,14 +33,17 @@ public class SimpleQuery<T> implements Query<T> {
         this.params.put(position, value);
         return this;
     }
-    // TODO: add logging & java doc to all EAGER/LAZY logic -> then testing
+
     @Override
     public List<T> list() {
+        log.trace("sql: {}", sql);
+        log.trace("parse List<{}>", resultType.getSimpleName());
         try (PreparedStatement statement = session.getConnection().prepareStatement(sql)) {
             for (Map.Entry<Integer, Object> entry : params.entrySet()) {
                 statement.setObject(entry.getKey(), entry.getValue());
             }
             try (ResultSet resultSet = statement.executeQuery()) {
+                ResultSetParser resultSetParser = new ResultSetParser(resultSet, session, loader);
                 Map<Object, T> resultRows = new LinkedHashMap<>();
                 while (resultSet.next()) {
                     String idColumnName = metadata.idColumn();
@@ -47,19 +53,19 @@ public class SimpleQuery<T> implements Query<T> {
                     if (entity == null) {
                         entity = (T) session.getPersistenceContext().get(key);
                         if (entity == null) {
-                            // parse simple fields
-                            entity = ResultSetParser.parseEntity(resultSet, metadata, resultType, "", session);
+                            log.trace("{}: parse simple fields in ResultSet", resultType.getSimpleName());
+                            entity = resultSetParser.parseEntity(resultType, metadata, "");
                             session.getPersistenceContext().put(key, entity);
-                            // add single EAGER fields
+                            log.trace("{}: load single EAGER fields if exists", resultType.getSimpleName());
                             loader.fillForeignKeys(metadata, resultSet, entity, "");
                         }
                         resultRows.put(id, entity);
                     }
-                    // if was EAGER collection (join) -> parsed related entities
-                    ResultSetParser.parseJoinedCollections(resultSet, metadata, entity, session.getEntities(), session);
+                    log.trace("{}: parse EAGER collection in ResultSet if exists", resultType.getSimpleName());
+                    resultSetParser.parseJoinedCollections(entity, metadata);
                 }
-                // if inside EAGER collection (each child) was another EAGER collection
                 List<T> finalResults = new ArrayList<>(resultRows.values());
+                log.trace("{}: check having not parsed EAGER collection", resultType.getSimpleName());
                 for (T entity : finalResults) {
                     loader.resolveDeepEagerCollections(entity, metadata);
                 }

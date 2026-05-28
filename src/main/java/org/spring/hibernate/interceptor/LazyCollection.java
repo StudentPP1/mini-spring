@@ -1,5 +1,7 @@
 package org.spring.hibernate.interceptor;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spring.hibernate.entity.EntityMetadata;
 import org.spring.hibernate.query.SqlBuilder;
 import org.spring.hibernate.session.InternalSession;
@@ -15,6 +17,7 @@ public class LazyCollection<T> implements Collection<T> {
     private final Class<?> childClass;
     private final Object parent;
     private final EntityMetadata parentMetadata;
+    private static final Logger log = LogManager.getLogger(LazyCollection.class);
 
     public LazyCollection(InternalSession session, Collection<T> collection, Class<?> childClass, Object parent, EntityMetadata parentMetadata) {
         this.session = session;
@@ -107,13 +110,15 @@ public class LazyCollection<T> implements Collection<T> {
         if (!isInitialized) {
             try {
                 EntityMetadata childMeta = session.getEntityMetadata(childClass);
-                String foreignKey = childMeta.findForeignKeyByEntity(parent.getClass())
+                String foreignKey = childMeta.findForeignKeyBy(parent.getClass())
                         .orElseThrow(() -> new IllegalStateException("foreignKey to " + parent.getClass().getSimpleName() + " in " + childClass.getSimpleName() + " not found"));
                 String sql = SqlBuilder.selectByColumn(childMeta.tableName(), foreignKey);
+                log.trace("lazy loading collection to class: {} sql: {}", parent.getClass().getSimpleName(), sql);
                 Object parentId = session.getIdValue(parent, parentMetadata);
                 List<T> children = session.createQuery(sql, (Class<T>) childClass)
                         .setParameter(1, parentId)
                         .list();
+                log.trace("set lazy collection: {}", children);
                 this.collection.addAll(children);
                 isInitialized = true;
             } catch (Exception e) {

@@ -3,6 +3,7 @@ package org.spring.hibernate.entity;
 import org.spring.hibernate.annotation.FetchType;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 public record RelationField(String name,
                             Field field,
@@ -11,4 +12,8 @@ public record RelationField(String name,
                             String mappedBy,
                             Boolean isRelationOwner
 ) implements EntityField {
+
+    public boolean isEagerCollection() {
+        return !isRelationOwner && fetchType.equals(FetchType.EAGER) && List.class.isAssignableFrom(field.getType());
+    }
 }

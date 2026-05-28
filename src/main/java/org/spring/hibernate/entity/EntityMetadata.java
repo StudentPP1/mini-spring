@@ -7,6 +7,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Class with all data about entity
+ */
 public record EntityMetadata(
         String tableName,
         String idField,
@@ -21,7 +24,7 @@ public record EntityMetadata(
         return entityFields;
     }
 
-    public Optional<String> findForeignKeyByEntity(Object entity) {
+    public Optional<String> findForeignKeyBy(Object entity) {
         return relationFields.stream().filter(entityField ->
                 entityField.isRelationOwner() && entityField.field()
                         .getType()
@@ -46,5 +49,11 @@ public record EntityMetadata(
 
     public List<RelationField> findLazyFields() {
         return relationFields.stream().filter(e -> e.fetchType().equals(FetchType.LAZY)).toList();
+    }
+
+    public List<RelationField> getAllRelatedCollections() {
+        return relationFields.stream()
+                .filter(e -> !e.isRelationOwner())
+                .toList();
     }
 }

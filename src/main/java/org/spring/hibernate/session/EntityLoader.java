@@ -13,10 +13,7 @@ import java.lang.reflect.Field;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 public class EntityLoader {
     private static final Logger log = LogManager.getLogger(EntityLoader.class);
@@ -46,16 +43,20 @@ public class EntityLoader {
             statement.setObject(1, id);
             log.trace("create find statement with id param");
             try (ResultSet resultSet = statement.executeQuery()) {
+                ResultSetParser parser = new ResultSetParser(resultSet, session, this);
                 T rootEntity = null;
                 while (resultSet.next()) {
                     if (rootEntity == null) {
-                        rootEntity = ResultSetParser.parseEntity(resultSet, metadata, entityClass, "t0_", session);
+                        log.trace("{}: parse simple fields in ResultSet", entityClass.getSimpleName());
+                        rootEntity = parser.parseEntity(entityClass, metadata,"t0_");
                         cache.put(key, rootEntity);
-                        // load Person by @JoinColumn (if exists)
+                        log.trace("{}: load single EAGER fields if exists", entityClass.getSimpleName());
                         fillForeignKeys(metadata, resultSet, rootEntity, "t0_");
                     }
-                    ResultSetParser.parseJoinedCollections(resultSet, metadata, rootEntity, session.getEntities(), session);
+                    log.trace("{}: parse EAGER collection in ResultSet if exists", entityClass.getSimpleName());
+                    parser.parseJoinedCollections(rootEntity, metadata);
                 }
+                log.trace("{}: check having not parsed EAGER collection", entityClass.getSimpleName());
                 if (rootEntity != null) {
                     resolveDeepEagerCollections(rootEntity, metadata);
                 }
@@ -68,19 +69,20 @@ public class EntityLoader {
 
     public void resolveDeepEagerCollections(Object entity, EntityMetadata metadata) throws IllegalAccessException, NoSuchFieldException {
         Optional<RelationField> optionalRelationField = metadata.findEagerCollection();
-        if (optionalRelationField.isEmpty()) return;
+        if (optionalRelationField.isEmpty()) {
+            log.trace("{}: hasn't eager collection", entity.getClass().getSimpleName());
+            return;
+        }
         RelationField relationField = optionalRelationField.get();
         Field field = relationField.field();
         field.setAccessible(true);
         Collection<?> children = (Collection<?>) field.get(entity);
-        // load EAGER collection
-        // in each children collection element (Note)
-        // inside parent entity (Person -> List<Note>)
         if (children == null || children.isEmpty()) {
             Class<?> childClass = EntityHelper.getEntityClass(relationField.field());
             EntityMetadata childMeta = session.getEntityMetadata(childClass);
-            String foreignKey = relationField.mappedBy();
-            // SELECT * FROM subnotes WHERE note_id = ?;
+            String foreignKey = childMeta.findForeignKeyBy(entity)
+                    .orElseThrow(() -> new IllegalStateException("foreignKey to " + entity.getClass().getSimpleName() + " in " + childClass.getSimpleName() + " not found"));
+            log.trace("{}: has not filled eager Collection<{}>", entity.getClass().getSimpleName(), childClass.getSimpleName());
             String sql = SqlBuilder.selectByColumn(childMeta.tableName(), foreignKey);
             Object parentId = session.getIdValue(entity, metadata);
             Collection<Object> fetched = (Collection<Object>) session.createQuery(sql, childClass)
@@ -91,7 +93,6 @@ public class EntityLoader {
             field.set(entity, finalCollection);
             children = finalCollection;
         }
-        // if subnote have eager collection
         if (children != null) {
             for (Object child : children) {
                 EntityMetadata childMeta = session.getEntityMetadata(child.getClass());
@@ -106,7 +107,12 @@ public class EntityLoader {
             String fkColumn = prefix + relationField.foreignKey();
             Object fkValue = resultSet.getObject(fkColumn);
             if (fkValue != null) {
-                log.trace("Found foreign key {} = {}. Triggering recursive find.", fkColumn, fkValue);
+                log.trace("{}: found foreign key {} = {}: find -> {}",
+                        parent.getClass().getSimpleName(),
+                        fkColumn,
+                        fkValue,
+                        childClass.getSimpleName()
+                );
                 Object childEntity = load(childClass, fkValue);
                 Field field = relationField.field();
                 field.setAccessible(true);

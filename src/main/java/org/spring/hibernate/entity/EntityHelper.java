@@ -8,6 +8,9 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Optional;
 
+/**
+ * Helper class with methods using in finding eager relation & parsing result sets
+ */
 @UtilityClass
 public class EntityHelper {
     public static Class<?> getEntityClass(Field field) {

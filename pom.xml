@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>dev.studentpp1</groupId>
-    <artifactId>custom-spring</artifactId>
+    <artifactId>mini-spring</artifactId>
     <version>1.0.0</version>
 
     <properties>

@@ -72,26 +72,25 @@ public final class EntityScanner {
                         field
                 ));
             } else {
-                relationFields.add(new RelationField(
+                RelationField relationField = new RelationField(
                         columnName,
                         field,
                         relationData.foreignKey(),
                         relationData.fetchType(),
                         relationData.mappedBy(),
                         relationData.isRelationOwner()
-                ));
+                );
+                relationFields.add(relationField);
+                eagerBagCount = validateBagCount(element, relationField, eagerBagCount);
             }
-            eagerBagCount = validateBagCount(element, field, relationData, eagerBagCount);
         }
+        log.trace("get relation metadata from entity: {}", relationFields);
         log.trace("get metadata from entity: {}", element.getSimpleName());
         return new EntityMetadata(tableName, idField, idColumn, relationFields, simpleFields);
     }
 
-    private static int validateBagCount(Class<?> element, Field field, RelationData relationData, int eagerBagCount) {
-        if (relationData != null
-                && !relationData.isRelationOwner()
-                && relationData.fetchType() == FetchType.EAGER
-                && List.class.isAssignableFrom(field.getType())) {
+    private static int validateBagCount(Class<?> element, RelationField relationField, int eagerBagCount) {
+        if (relationField.isEagerCollection()) {
             eagerBagCount++;
             if (eagerBagCount > 1) {
                 throw new RuntimeException(

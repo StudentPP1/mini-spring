@@ -1,5 +1,7 @@
 package org.spring.hibernate.query;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spring.hibernate.annotation.FetchType;
 import org.spring.hibernate.entity.*;
 
@@ -14,6 +16,8 @@ import java.util.stream.Collectors;
  * Works directly with EntityMetadata.
  */
 public final class SqlBuilder {
+    private static final Logger log = LogManager.getLogger(SqlBuilder.class);
+
     private SqlBuilder() {
     }
 
@@ -32,6 +36,10 @@ public final class SqlBuilder {
                 String childAlias = "t" + tableCounter++;
                 Class<?> childClass = EntityHelper.getEntityClass(relationField.field());
                 EntityMetadata childMeta = entities.get(childClass);
+                log.trace("{}: has eager Collection<{}> -> build join sql",
+                        rootMeta.tableName(),
+                        childClass.getSimpleName()
+                );
                 select.append(", ");
                 appendAliasedColumns(select, childMeta, childAlias);
                 join.append(" LEFT JOIN ")

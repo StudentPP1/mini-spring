@@ -3,6 +3,7 @@ package org.spring.hibernate.interceptor;
 import org.spring.hibernate.entity.EntityMetadata;
 import org.spring.hibernate.session.InternalSession;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Collection;
 import java.util.ListIterator;
@@ -10,7 +11,7 @@ import java.util.ListIterator;
 public class LazyList<T> extends LazyCollection<T> implements List<T> {
 
     public LazyList(InternalSession session, Class<?> childClass, Object parent, EntityMetadata parentMetadata) {
-        super(session, new java.util.ArrayList<>(), childClass, parent, parentMetadata);
+        super(session, new ArrayList<>(), childClass, parent, parentMetadata);
     }
 
     private List<T> getList() {
