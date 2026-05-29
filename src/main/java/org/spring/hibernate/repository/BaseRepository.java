@@ -1,6 +1,8 @@
 package org.spring.hibernate.repository;
 
 import lombok.Getter;
+import org.spring.hibernate.entity.EntityMetadata;
+import org.spring.hibernate.session.InternalSession;
 import org.spring.hibernate.session.Session;
 
 import java.io.Serializable;
@@ -42,7 +44,9 @@ public abstract class BaseRepository<E extends Serializable, K extends Serializa
         return Optional.ofNullable(session.find(entityClass, id));
     }
 
+    @Override
     public List<E> findAll() {
-        return session.createQuery("FROM " + entityClass.getSimpleName(), entityClass).list();
+        String sql = "SELECT * FROM %s;".formatted(entityClass.getSimpleName());
+        return session.createQuery(sql, entityClass).list();
     }
 }

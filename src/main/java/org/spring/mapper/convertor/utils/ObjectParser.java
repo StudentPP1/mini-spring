@@ -23,6 +23,9 @@ public class ObjectParser {
 
     public static int parseObject(int pos, Object instance, List<Token> tokens) throws Exception {
         log.trace("check if OBJECT: {} is not empty", instance.getClass());
+        if (tokens.get(pos).type() == START_OBJECT) {
+            pos++;
+        }
         if (tokens.get(pos).type() == END_OBJECT) {
             return pos + 1;
         }
