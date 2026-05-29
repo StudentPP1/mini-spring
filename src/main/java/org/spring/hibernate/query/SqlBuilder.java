@@ -25,7 +25,7 @@ public final class SqlBuilder {
         return "SELECT * FROM %s WHERE %s = ?".formatted(table, column);
     }
 
-    public static String selectByIdWithJoin(EntityMetadata rootMeta, Map<Class<?>, EntityMetadata> entities) {
+    public static String selectByIdWithJoin(Class<?> rootClass, EntityMetadata rootMeta, Map<Class<?>, EntityMetadata> entities) {
         StringBuilder select = new StringBuilder("SELECT ");
         String from = " FROM " + rootMeta.tableName() + " t0";
         StringBuilder join = new StringBuilder();
@@ -36,6 +36,8 @@ public final class SqlBuilder {
                 String childAlias = "t" + tableCounter++;
                 Class<?> childClass = EntityHelper.getEntityClass(relationField.field());
                 EntityMetadata childMeta = entities.get(childClass);
+                String foreignKey = childMeta.findForeignKeyBy(rootClass)
+                        .orElseThrow(() -> new IllegalStateException("foreignKey to " + rootClass.getSimpleName() + " in " + childClass.getSimpleName() + " not found"));;
                 log.trace("{}: has eager Collection<{}> -> build join sql",
                         rootMeta.tableName(),
                         childClass.getSimpleName()
@@ -44,12 +46,13 @@ public final class SqlBuilder {
                 appendAliasedColumns(select, childMeta, childAlias);
                 join.append(" LEFT JOIN ")
                         .append(childMeta.tableName()).append(" ").append(childAlias)
-                        .append(" ON t0.").append(relationField.foreignKey())
+                        .append(" ON t0.").append(rootMeta.idColumn())
                         .append(" = ")
-                        .append(childAlias).append(".").append(childMeta.idColumn());
+                        .append(childAlias).append(".").append(foreignKey).append(" ");
             }
         }
-        String where = "WHERE t0." + rootMeta.idColumn() + " = ?";
+        String space = join.isEmpty() ? " " : "";
+        String where = space + "WHERE t0." + rootMeta.idColumn() + " = ?";
         return select + from + join + where;
     }
 

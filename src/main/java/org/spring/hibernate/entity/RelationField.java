@@ -10,7 +10,7 @@ public record RelationField(String name,
                             String foreignKey,
                             FetchType fetchType,
                             String mappedBy,
-                            Boolean isRelationOwner
+                            boolean isRelationOwner
 ) implements EntityField {
 
     public boolean isEagerCollection() {

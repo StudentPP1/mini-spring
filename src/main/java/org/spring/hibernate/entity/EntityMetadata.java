@@ -24,11 +24,11 @@ public record EntityMetadata(
         return entityFields;
     }
 
-    public Optional<String> findForeignKeyBy(Object entity) {
+    public Optional<String> findForeignKeyBy(Class<?> entityClass) {
         return relationFields.stream().filter(entityField ->
                 entityField.isRelationOwner() && entityField.field()
                         .getType()
-                        .equals(entity.getClass())
+                        .equals(entityClass)
         ).map(RelationField::foreignKey).findAny();
     }
 

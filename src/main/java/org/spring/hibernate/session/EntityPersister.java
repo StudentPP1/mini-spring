@@ -109,12 +109,18 @@ public class EntityPersister {
             Field field = relationField.field();
             field.setAccessible(true);
             Object collection = field.get(parent);
-            if (!(collection instanceof Iterable<?> iterable)) return;
+            log.trace("{}: have collection: {}", parent.getClass().getSimpleName(), collection.toString());
+            if (!(collection instanceof Iterable<?> iterable)) {
+                log.warn("collection isn't iterable");
+                return;
+            }
             List<Object> currentChildIds = new ArrayList<>();
             Class<?> childClass = EntityHelper.getEntityClass(field);
             EntityMetadata childMeta = session.getEntityMetadata(childClass);
+            log.trace("get metadata of child: {}", childMeta);
             for (Object child : iterable) {
                 Object childId = session.getIdValue(child, childMeta);
+                log.trace("{}: child id = {}", child.getClass().getSimpleName(), childId);
                 if (childId == null) {
                     log.trace("{}: is new. Insert row to database", child.getClass().getSimpleName());
                     persist(child);
@@ -132,7 +138,7 @@ public class EntityPersister {
     }
 
     private void deleteOtherChildren(Object parent, EntityMetadata parentMetadata, List<Object> currentChildIds, EntityMetadata childMeta) throws SQLException, NoSuchFieldException, IllegalAccessException {
-        String foreignKey = childMeta.findForeignKeyBy(parent)
+        String foreignKey = childMeta.findForeignKeyBy(parent.getClass())
                 .orElseThrow(() -> new RuntimeException(parent.getClass().getSimpleName() + " hasn't mappedBy field!"));
         StringBuilder sql = new StringBuilder("DELETE FROM ")
                 .append(childMeta.tableName())
@@ -161,13 +167,13 @@ public class EntityPersister {
 
     private int fillStatement(Object entity, EntityMetadata metadata, PreparedStatement statement) throws SQLException, IllegalAccessException {
         int i = 1;
-        for (EntityField entityField : metadata.fields()) {
+        for (EntityField entityField : metadata.fields().stream().filter(EntityHelper::getPhysicalEntityField).toList()) {
             try {
                 Field field = entityField.field();
                 String columnName = entityField.name();
                 if (columnName.equals(metadata.idColumn())) continue;
                 field.setAccessible(true);
-                if (entityField instanceof RelationField relationField && !relationField.foreignKey().isEmpty()) {
+                if (entityField instanceof RelationField relationField && relationField.isRelationOwner()) {
                     Object parentEntity = field.get(entity);
                     if (parentEntity == null) {
                         // TODO: if optional = false -> throw exception

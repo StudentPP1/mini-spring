@@ -37,7 +37,7 @@ public class EntityLoader {
             return (T) cache.get(key);
         }
         // mappedBy -> load List<Node> by left join (if exists)
-        String sql = SqlBuilder.selectByIdWithJoin(metadata, session.getEntities());
+        String sql = SqlBuilder.selectByIdWithJoin(entityClass, metadata, session.getEntities());
         log.trace("generate sql: {}", sql);
         try (PreparedStatement statement = session.getConnection().prepareStatement(sql)) {
             statement.setObject(1, id);
@@ -80,7 +80,7 @@ public class EntityLoader {
         if (children == null || children.isEmpty()) {
             Class<?> childClass = EntityHelper.getEntityClass(relationField.field());
             EntityMetadata childMeta = session.getEntityMetadata(childClass);
-            String foreignKey = childMeta.findForeignKeyBy(entity)
+            String foreignKey = childMeta.findForeignKeyBy(entity.getClass())
                     .orElseThrow(() -> new IllegalStateException("foreignKey to " + entity.getClass().getSimpleName() + " in " + childClass.getSimpleName() + " not found"));
             log.trace("{}: has not filled eager Collection<{}>", entity.getClass().getSimpleName(), childClass.getSimpleName());
             String sql = SqlBuilder.selectByColumn(childMeta.tableName(), foreignKey);

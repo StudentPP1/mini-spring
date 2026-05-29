@@ -1,5 +1,7 @@
 package org.spring.mapper.convertor.utils;
 
+import org.spring.annotation.JsonIgnore;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.Collection;
@@ -50,6 +52,9 @@ public final class WriteHelpers {
         Field[] fields = obj.getClass().getDeclaredFields();
         boolean first = true;
         for (Field f : fields) {
+            if (f.isAnnotationPresent(JsonIgnore.class)) {
+                continue;
+            }
             f.setAccessible(true);
             try {
                 Object v = f.get(obj);
